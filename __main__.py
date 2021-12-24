@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
-import gitdiff
+import gui
+from gui import UiCurses
 
-print(gitdiff.get_filenames())
+ui = UiCurses()
+gui.initialize(ui)
