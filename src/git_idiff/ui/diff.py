@@ -6,12 +6,12 @@ import ui.colors
 from ui.pad import CursesPad
 
 class DiffPad(CursesPad):
-    def __init__(self, stdscr, gitdiff: GitDiff, filelist_column_width: int):
+    def __init__(self, window: curses.window, gitdiff: GitDiff, filelist_column_width: int):
         self.gitdiff: GitDiff = gitdiff
 
-        lines, columns = stdscr.getmaxyx()
+        lines, columns = window.getmaxyx()
 
-        super().__init__(stdscr,
+        super().__init__(window,
             height = lines - 1,
             width = columns - filelist_column_width,
             offset_y = 0,

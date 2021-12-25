@@ -16,7 +16,7 @@ class CursesUi:
     def __init__(self, diff_args: typing.Optional[typing.List[str]] = None):
         self.gitdiff: GitDiff = GitDiff(diff_args)
 
-        self.stdscr = None
+        self.stdscr: curses.window = None
         self.filelist_column_width: int = 24
 
         self.pad_filelist: FileList = None
