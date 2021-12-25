@@ -17,16 +17,17 @@ class CursesUi:
 
         self.pad_filelist: typing.Optional[CursesPad] = None
         self.pad_diff: typing.Optional[CursesPad] = None
+        self.pad_statusbar: typing.Optional[CursesPad] = None
 
         self.filelist: gitdiff.FileList = []
         self.diff_contents: typing.List[str] = []
 
         self.selected_file: typing.Optional[str] = None
         self.selected_file_idx: int = -1
-        self.diff_linenum: int = 1
 
     def run(self, stdscr) -> None:
         self.stdscr = stdscr
+        lines, columns = stdscr.getmaxyx()
 
         curses.curs_set(False)
 
@@ -35,25 +36,29 @@ class CursesUi:
         curses.init_pair(CursesUi.COLOR_REMOVE, curses.COLOR_RED, -1)
         curses.init_pair(CursesUi.COLOR_SECTION, curses.COLOR_CYAN, -1)
 
-        self.pad_filelist = CursesPad(curses,
-            height = curses.LINES,
+        self.pad_filelist = CursesPad(stdscr,
+            height = lines - 1,
             width = self.filelist_column_width,
             offset_y = 0,
             offset_x = 0
         )
-        self.pad_diff = CursesPad(curses,
-            height = curses.LINES,
-            width = curses.COLS - self.filelist_column_width,
+        self.pad_diff = CursesPad(stdscr,
+            height = lines - 1,
+            width = columns - self.filelist_column_width,
             offset_y = 0,
             offset_x = self.filelist_column_width
+        )
+        self.pad_statusbar = CursesPad(stdscr,
+            height = 2,
+            width = columns,
+            offset_y = lines - 1,
+            offset_x = 0
         )
 
         stdscr.erase()
         stdscr.refresh()
 
-        self.filelist = gitdiff.get_filenames(self.diff_args)
-        self.update_filelist()
-
+        self.get_files()
         self._select_file(0)
 
         while True:
@@ -77,6 +82,13 @@ class CursesUi:
             elif c == curses.KEY_RESIZE:
                 pass
 
+            self.update_statusbar()
+
+    def get_files(self) -> None:
+        self.filelist = gitdiff.get_filenames(self.diff_args)
+        self.update_filelist()
+        self.update_statusbar()
+
     def select_next_file(self) -> bool:
         if self.selected_file_idx == len(self.filelist) - 1:
             return False
@@ -93,9 +105,14 @@ class CursesUi:
         self.selected_file_idx = idx
         self.selected_file = self.filelist[self.selected_file_idx][0]
 
-        self.diff_contents = gitdiff.get_file_diff(self.selected_file, self.diff_args)
+        self.get_file_diff()
+
         self.update_filelist()
         self.update_diff()
+        self.update_statusbar()
+
+    def get_file_diff(self) -> None:
+        self.diff_contents = gitdiff.get_file_diff(self.selected_file, self.diff_args)
 
     def update_filelist(self) -> None:
         self.pad_filelist.pad.erase()
@@ -163,6 +180,32 @@ class CursesUi:
             idx += 1
 
         self.pad_diff.refresh(0, 0)
+
+    def update_statusbar(self) -> None:
+        self.pad_statusbar.pad.erase()
+
+        _, max_x = self.pad_statusbar.pad.getmaxyx()
+
+        diff_linenum = min(len(self.diff_contents), self.pad_diff.height + self.pad_diff.y)
+
+        leftstring = f' {self.selected_file_idx + 1} / {len(self.filelist)} files'
+        centerstring = ' '
+        rightstring = f'line {diff_linenum} / {len(self.diff_contents)} '
+
+        leftcenter_pad = ' ' * (
+            (max_x - (len(leftstring) + len(centerstring) + len(rightstring))) // 2
+        )
+        centerright_pad = ' ' * (
+            max_x - (len(leftstring) + len(centerstring) + len(rightstring) + len(leftcenter_pad))
+        )
+
+        self.pad_statusbar.pad.addstr(
+            0, 0,
+            (leftstring + leftcenter_pad + centerstring + centerright_pad + rightstring)[:max_x],
+            curses.A_REVERSE
+        )
+
+        self.pad_statusbar.refresh(0, 0)
 
 def curses_initialize(cui: CursesUi) -> None:
     curses.wrapper(cui.run)
