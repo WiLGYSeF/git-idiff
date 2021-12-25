@@ -27,6 +27,7 @@ class CursesUi:
 
         self.selected_file: typing.Optional[str] = None
         self.selected_file_idx: int = -1
+        self.filelist_visible: bool = True
 
     def run(self, stdscr) -> None:
         self.stdscr = stdscr
@@ -69,7 +70,9 @@ class CursesUi:
             c = self.stdscr.getch()
             if c < 256:
                 ch = chr(c)
-                if ch == 'n':
+                if ch == 'f':
+                    self.toggle_filelist()
+                elif ch == 'n':
                     self.select_next_file()
                 elif ch == 'p':
                     self.select_prev_file()
@@ -152,7 +155,27 @@ class CursesUi:
     def get_file_diff(self) -> None:
         self.diff_contents = gitdiff.get_file_diff(self.selected_file, self.diff_args)
 
+    def toggle_filelist(self) -> None:
+        if self.filelist_visible:
+            self.filelist_visible = False
+            self.pad_diff.offset_x -= self.filelist_column_width
+            self.pad_diff.width += self.filelist_column_width
+
+            self.pad_filelist.pad.erase()
+            self.pad_filelist.refresh(0, 0)
+        else:
+            self.filelist_visible = True
+            self.pad_diff.offset_x += self.filelist_column_width
+            self.pad_diff.width -= self.filelist_column_width
+
+            self.update_filelist()
+
+        self.update_diff()
+
     def update_filelist(self) -> None:
+        if not self.filelist_visible:
+            return
+
         self.pad_filelist.pad.erase()
 
         max_y, max_x = self.pad_filelist.pad.getmaxyx()
