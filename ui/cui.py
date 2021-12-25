@@ -9,6 +9,8 @@ class CursesUi:
     COLOR_REMOVE = 2
     COLOR_SECTION = 3
 
+    CURSES_BUTTON5_PRESSED = 0x00200000 # thanks python
+
     def __init__(self, diff_args: typing.Optional[typing.List[str]] = None):
         self.diff_args: typing.List[str] = diff_args if diff_args is not None else []
 
@@ -31,6 +33,7 @@ class CursesUi:
         lines, columns = stdscr.getmaxyx()
 
         curses.curs_set(False)
+        curses.mousemask(-1)
 
         curses.use_default_colors()
         curses.init_pair(CursesUi.COLOR_ADD, curses.COLOR_GREEN, -1)
@@ -80,6 +83,26 @@ class CursesUi:
                 self.pad_diff.scroll(0, -1)
             elif c == curses.KEY_RIGHT:
                 self.pad_diff.scroll(0, 1)
+            elif c == curses.KEY_MOUSE:
+                _, x, y, _, state = curses.getmouse()
+                if self.pad_filelist.pad.enclose(y, x):
+                    if state & curses.BUTTON1_CLICKED:
+                        self._select_file(self.pad_filelist.y + y)
+                    elif state & curses.BUTTON4_PRESSED:
+                        self.select_prev_file()
+                    elif state & CursesUi.CURSES_BUTTON5_PRESSED:
+                        self.select_next_file()
+                elif self.pad_diff.pad.enclose(y, x):
+                    if state & curses.BUTTON4_PRESSED:
+                        if state & curses.BUTTON_SHIFT:
+                            self.pad_diff.scroll(0, -5)
+                        else:
+                            self.pad_diff.scroll(-5, 0)
+                    elif state & CursesUi.CURSES_BUTTON5_PRESSED:
+                        if state & curses.BUTTON_SHIFT:
+                            self.pad_diff.scroll(0, 5)
+                        else:
+                            self.pad_diff.scroll(5, 0)
             elif c == curses.KEY_RESIZE:
                 pass
 
@@ -155,9 +178,9 @@ class CursesUi:
                 if idx == self.selected_file_idx:
                     attr |= curses.A_REVERSE
 
+                if length + len(val) >= max_x:
+                    val = val[len(val) - (max_x - length):]
                 if len(val) > 0:
-                    if length + len(val) >= max_x:
-                        val = val[len(val) - (max_x - length):]
                     self.pad_filelist.pad.addstr(idx, length, val, attr)
                     length += len(val)
 
