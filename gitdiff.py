@@ -1,3 +1,4 @@
+import re
 import subprocess
 import typing
 
@@ -24,23 +25,43 @@ def get_filenames(
         )
     ]
 
-def get_file_diff(fname: str) -> typing.List[str]:
-    output = subprocess.check_output(['git', 'diff', fname])
+def get_file_diff(
+    fname: str,
+    args: typing.Optional[typing.List[str]] = None
+) -> typing.List[str]:
+    cmdargs = ['git', 'diff']
+    if args is not None:
+        cmdargs.extend(_sanitize_args(args))
+    cmdargs.extend(('--', fname))
+
+    output = subprocess.check_output(cmdargs)
     lines = output.decode('utf-8').split('\n')
+
+    """
     headers = []
     idx = 0
 
-    header_starts =  ['diff ', 'index ', '--- ', '+++ ']
+    headers_regex = re.compile(r'^(diff|index|(new|deleted) file|---|\+\+\+) ')
 
-    while idx < len(header_starts):
-        if not lines[idx].startswith(header_starts[idx]):
+    while idx < len(lines):
+        if headers_regex.search(lines[idx]) is None:
             break
         idx += 1
 
     for _ in range(idx):
         headers.append(lines.pop(0))
+    """
 
     return lines
 
 def _sanitize_args(args: typing.List[str]) -> typing.List[str]:
-    return list(filter(lambda a: a[0] != '-', args))
+    result = []
+
+    for arg in args:
+        if arg == '--':
+            break
+        if arg[0] == '-':
+            continue
+        result.append(arg)
+
+    return result

@@ -9,7 +9,9 @@ class CursesUi:
     COLOR_REMOVE = 2
     COLOR_SECTION = 3
 
-    def __init__(self):
+    def __init__(self, diff_args: typing.Optional[typing.List[str]] = None):
+        self.diff_args: typing.List[str] = diff_args if diff_args is not None else []
+
         self.stdscr = None
         self.filelist_column_width: int = 24
 
@@ -49,13 +51,13 @@ class CursesUi:
         stdscr.erase()
         stdscr.refresh()
 
-        self.filelist = gitdiff.get_filenames()
+        self.filelist = gitdiff.get_filenames(self.diff_args)
         self.update_filelist()
 
         self._select_file(0)
 
         while True:
-            c = self.input()
+            c = self.stdscr.getch()
             if c < 256:
                 ch = chr(c)
                 if ch == 'n':
@@ -91,7 +93,7 @@ class CursesUi:
         self.selected_file_idx = idx
         self.selected_file = self.filelist[self.selected_file_idx][0]
 
-        self.diff_contents = gitdiff.get_file_diff(self.selected_file)
+        self.diff_contents = gitdiff.get_file_diff(self.selected_file, self.diff_args)
         self.update_filelist()
         self.update_diff()
 
@@ -161,9 +163,6 @@ class CursesUi:
             idx += 1
 
         self.pad_diff.refresh(0, 0)
-
-    def input(self) -> int:
-        return self.stdscr.getch()
 
 def curses_initialize(cui: CursesUi) -> None:
     curses.wrapper(cui.run)
