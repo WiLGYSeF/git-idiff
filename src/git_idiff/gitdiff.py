@@ -1,3 +1,4 @@
+import asyncio
 import re
 import subprocess
 import typing
@@ -49,10 +50,20 @@ class GitDiff:
 
         self.args = self._sanitize_args(args) if args is not None else []
 
-    def get_filenames(self) -> typing.List[GitFile]:
-        output = subprocess.check_output([
+    async def get_filenames_async(self) -> typing.List[GitFile]:
+        proc = await asyncio.create_subprocess_exec(*[
             'git', 'diff', '--numstat', '-z', *self.args
-        ])
+        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, _ = await proc.communicate()
+
+        return self._get_filenames(output)
+
+    def get_filenames(self) -> typing.List[GitFile]:
+        return self._get_filenames(subprocess.check_output([
+            'git', 'diff', '--numstat', '-z', *self.args
+        ]))
+
+    def _get_filenames(self, output: bytes) -> typing.List[GitFile]:
         output_split = output.split(b'\0')
         idx = 0
 

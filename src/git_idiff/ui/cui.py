@@ -1,3 +1,4 @@
+import asyncio
 import curses
 import typing
 
@@ -32,7 +33,7 @@ class CursesUi:
         self.selected_file: typing.Optional[str] = None
         self.selected_file_idx: int = -1
 
-    def run(self, stdscr) -> None:
+    async def run(self, stdscr) -> None:
         self.stdscr = stdscr
 
         curses.curs_set(False)
@@ -46,7 +47,11 @@ class CursesUi:
         stdscr.erase()
         stdscr.refresh()
 
-        self.get_files()
+        await self.get_files_async()
+
+        if len(self.filelist) == 0:
+            return
+
         self._select_file(0)
 
         while True:
@@ -102,8 +107,32 @@ class CursesUi:
 
             self.update_statusbar()
 
+    async def get_files_async(self) -> None:
+        self.filelist = []
+        counter = 0
+
+        task = asyncio.create_task(self.gitdiff.get_filenames_async())
+
+        while True:
+            try:
+                filelist = await asyncio.wait_for(asyncio.shield(task), timeout=0.25)
+                break
+            except asyncio.TimeoutError:
+                pass
+
+            self.stdscr.erase()
+            self.stdscr.addstr(0, 0, f'{counter}')
+            counter += 1
+            self.stdscr.refresh()
+
+        self.filelist = filelist
+        self._get_files()
+
     def get_files(self) -> None:
         self.filelist = self.gitdiff.get_filenames()
+        self._get_files()
+
+    def _get_files(self) -> None:
         self.total_insertions = 0
         self.total_deletions = 0
 
@@ -199,4 +228,7 @@ class CursesUi:
         ) if self.diff_lines() != 0 else 0
 
 def curses_initialize(cui: CursesUi) -> None:
-    curses.wrapper(cui.run)
+    curses.wrapper(lambda stdscr: _main(cui, stdscr))
+
+def _main(cui, stdscr) -> None:
+    asyncio.run(cui.run(stdscr))
