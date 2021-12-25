@@ -143,6 +143,9 @@ class CursesUi:
         return True
 
     def _select_file(self, idx: int) -> None:
+        if idx < 0 or idx >= len(self.filelist):
+            return
+
         self.selected_file_idx = idx
         self.selected_file = self.filelist[self.selected_file_idx][0]
 
