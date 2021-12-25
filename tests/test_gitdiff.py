@@ -47,6 +47,22 @@ class GitDiffTest(unittest.TestCase):
             gitdiff = GitDiff(entry[ARGS])
             self.assertListEqual(entry[EXPECTED], gitdiff.args)
 
+    def test_sanitize_args_whitelist_single_param(self):
+        ENTRIES = [
+            {
+                ARGS: ['-XM5X'],
+                EXPECTED: ['-M5X']
+            },
+            {
+                ARGS: ['-RXwM'],
+                EXPECTED: ['-RwM']
+            }
+        ]
+
+        for entry in ENTRIES:
+            gitdiff = GitDiff(entry[ARGS])
+            self.assertListEqual(entry[EXPECTED], gitdiff.args)
+
     def test_sanitize_args_whitelist(self):
         ENTRIES = [
             {
