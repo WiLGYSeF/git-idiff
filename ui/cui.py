@@ -23,6 +23,9 @@ class CursesUi:
         self.pad_statusbar: typing.Optional[CursesPad] = None
 
         self.filelist: gitdiff.FileList = []
+        self.total_insertions: int = 0
+        self.total_deletions: int = 0
+
         self.diff_contents: typing.List[str] = []
 
         self.selected_file: typing.Optional[str] = None
@@ -192,10 +195,20 @@ class CursesUi:
         )
         max_x -= 1
 
+        self.total_insertions = 0
+        self.total_deletions = 0
+
         idx = 0
         for fname, added, removed in self.filelist:
-            added_str = str(added) if added is not None else '-'
-            removed_str = str(removed) if removed is not None else '-'
+            if added is not None:
+                added_str = str(added)
+                self.total_insertions += added
+            else:
+                added_str = '-'
+
+            if removed is not None:
+                removed_str = str(removed)
+                self.total_deletions += removed
 
             total_length = len(f'{added_str} {removed_str} {fname}')
             length = 0
@@ -265,7 +278,7 @@ class CursesUi:
         diff_linenum = min(len(self.diff_contents), self.pad_diff.height + self.pad_diff.y)
         diff_colnum = min(diff_longest_line, self.pad_diff.width + self.pad_diff.x)
 
-        leftstring = f' {self.selected_file_idx + 1} / {len(self.filelist)} files'
+        leftstring = f' {self.selected_file_idx + 1} / {len(self.filelist)} files  +{self.total_insertions}  -{self.total_deletions}'
         centerstring = ' '
         rightstring = f'({diff_linenum}, {diff_colnum}) / ({len(self.diff_contents)}, {diff_longest_line}) '
 
