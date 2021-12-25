@@ -199,7 +199,11 @@ class CursesUi:
         self.total_deletions = 0
 
         idx = 0
-        for fname, added, removed in self.filelist:
+        for file in self.filelist:
+            fname = file.filename
+            added = file.insertions
+            removed = file.deletions
+
             if added is not None:
                 added_str = str(added)
                 self.total_insertions += added
