@@ -242,8 +242,8 @@ class CursesUi:
             write(' ')
             write(removed_str, curses.color_pair(CursesUi.COLOR_REMOVE))
             write(' ')
+            write(' ' * (max_x - length - len(fname)))
             write(fname)
-            write(' ' * (max_x - length))
             idx += 1
 
         self.pad_filelist.refresh(self.pad_filelist.y, 0)
