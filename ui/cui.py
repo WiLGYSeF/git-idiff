@@ -136,14 +136,14 @@ class CursesUi:
             if total_length > max_x:
                 fname = '...' + fname[len(fname) - (max_x - total_length) - 3:]
 
-            def write(s, attr=curses.A_NORMAL):
+            def write(val, attr=curses.A_NORMAL):
                 nonlocal length
 
                 if idx == self.selected_file_idx:
                     attr |= curses.A_REVERSE
 
-                self.pad_filelist.pad.addstr(idx, length, s, attr)
-                length += len(s)
+                self.pad_filelist.pad.addstr(idx, length, val, attr)
+                length += len(val)
 
             write(str(added), curses.color_pair(CursesUi.COLOR_ADD))
             write(' ')
@@ -158,7 +158,7 @@ class CursesUi:
         self.pad_diff.pad.erase()
 
         max_y, max_x = self.pad_diff.pad.getmaxyx()
-        longest_line = max(( len(line) for line in self.diff_contents ))
+        longest_line = self.diff_longest_line()
         if len(self.diff_contents) >= max_y or longest_line >= max_x:
             self.pad_diff.pad.resize(len(self.diff_contents) + 1, max(longest_line + 1, max_x))
 
@@ -186,11 +186,13 @@ class CursesUi:
 
         _, max_x = self.pad_statusbar.pad.getmaxyx()
 
+        diff_longest_line = self.diff_longest_line()
         diff_linenum = min(len(self.diff_contents), self.pad_diff.height + self.pad_diff.y)
+        diff_colnum = min(diff_longest_line, self.pad_diff.width + self.pad_diff.x)
 
         leftstring = f' {self.selected_file_idx + 1} / {len(self.filelist)} files'
         centerstring = ' '
-        rightstring = f'line {diff_linenum} / {len(self.diff_contents)} '
+        rightstring = f'({diff_linenum}, {diff_colnum}) / ({len(self.diff_contents)}, {diff_longest_line}) '
 
         leftcenter_pad = ' ' * (
             (max_x - (len(leftstring) + len(centerstring) + len(rightstring))) // 2
@@ -206,6 +208,11 @@ class CursesUi:
         )
 
         self.pad_statusbar.refresh(0, 0)
+
+    def diff_longest_line(self) -> int:
+        if len(self.diff_contents) == 0:
+            return 0
+        return max( len(line) for line in self.diff_contents )
 
 def curses_initialize(cui: CursesUi) -> None:
     curses.wrapper(cui.run)
