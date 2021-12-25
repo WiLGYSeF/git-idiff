@@ -1,6 +1,7 @@
+from abc import ABC, abstractmethod
 import curses
 
-class CursesPad:
+class CursesPad(ABC):
     def __init__(self, window, **kwargs):
         self.window = window
         self.height: int = kwargs['height']

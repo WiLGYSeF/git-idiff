@@ -5,7 +5,7 @@ from gitdiff import GitDiff, GitFile
 from ui.colors import init_colors
 from ui.diff import DiffPad
 from ui.filelist import FileList
-from ui.pad import CursesPad
+from ui.statusbar import StatusBar
 
 class CursesUi:
     FILELIST_SCROLL_OFFSET = 1
@@ -20,7 +20,7 @@ class CursesUi:
 
         self.pad_filelist: FileList = None
         self.pad_diff: DiffPad = None
-        self.pad_statusbar: CursesPad = None
+        self.pad_statusbar: StatusBar = None
 
         self.filelist: typing.List[GitFile] = []
         self.total_insertions: int = 0
@@ -34,7 +34,6 @@ class CursesUi:
 
     def run(self, stdscr) -> None:
         self.stdscr = stdscr
-        lines, columns = stdscr.getmaxyx()
 
         curses.curs_set(False)
         curses.mousemask(-1)
@@ -42,12 +41,7 @@ class CursesUi:
 
         self.pad_filelist = FileList(stdscr, self.filelist_column_width)
         self.pad_diff = DiffPad(stdscr, self.gitdiff, self.filelist_column_width)
-        self.pad_statusbar = CursesPad(stdscr,
-            height = 2,
-            width = columns,
-            offset_y = lines - 1,
-            offset_x = 0
-        )
+        self.pad_statusbar = StatusBar(stdscr)
 
         stdscr.erase()
         stdscr.refresh()
@@ -127,7 +121,7 @@ class CursesUi:
             return False
 
         self._select_file(self.selected_file_idx + 1)
-        if self.selected_file_idx - self.pad_filelist.y >= self.pad_filelist.height - 1 - CursesUi.FILELIST_SCROLL_OFFSET:
+        if self.selected_file_idx - self.pad_filelist.y >= self.pad_filelist.height - CursesUi.FILELIST_SCROLL_OFFSET - 1:
             self.pad_filelist.scroll(1, 0)
         return True
 
@@ -185,32 +179,15 @@ class CursesUi:
         )
 
     def update_statusbar(self) -> None:
-        self.pad_statusbar.pad.erase()
-
-        _, max_x = self.pad_statusbar.pad.getmaxyx()
-
-        diff_longest_line = self.diff_longest_line()
-        diff_linenum = min(self.diff_lines(), self.pad_diff.height + self.pad_diff.y)
-        diff_colnum = min(diff_longest_line, self.pad_diff.width + self.pad_diff.x)
-
-        leftstring = f' {self.selected_file_idx + 1} / {len(self.filelist)} files  +{self.total_insertions}  -{self.total_deletions}'
-        centerstring = ' '
-        rightstring = f'({diff_linenum}, {diff_colnum}) / ({self.diff_lines()}, {diff_longest_line}) '
-
-        leftcenter_pad = ' ' * (
-            (max_x - (len(leftstring) + len(centerstring) + len(rightstring))) // 2
+        self.pad_statusbar.update(
+            self.pad_diff,
+            self.diff_lines(),
+            self.diff_longest_line(),
+            self.selected_file_idx,
+            len(self.filelist),
+            self.total_insertions,
+            self.total_deletions
         )
-        centerright_pad = ' ' * (
-            max_x - (len(leftstring) + len(centerstring) + len(rightstring) + len(leftcenter_pad))
-        )
-
-        self.pad_statusbar.pad.addstr(
-            0, 0,
-            (leftstring + leftcenter_pad + centerstring + centerright_pad + rightstring)[:max_x],
-            curses.A_REVERSE
-        )
-
-        self.pad_statusbar.refresh(0, 0)
 
     def diff_lines(self) -> int:
         return len(self.diff_headers) + len(self.diff_contents)
