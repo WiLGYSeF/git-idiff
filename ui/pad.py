@@ -22,7 +22,8 @@ class CursesPad:
         self.pad.refresh(
             self._y, self._x,
             self.offset_y, self.offset_x,
-            min(self.height, curses.LINES) - 1, min(self.width, curses.COLS) - 1
+            min(self.height + self.offset_y, curses.LINES) - 1,
+            min(self.width + self.offset_x, curses.COLS) - 1
         )
 
 def clamp(val: int, minval: int, maxval: int) -> int:
