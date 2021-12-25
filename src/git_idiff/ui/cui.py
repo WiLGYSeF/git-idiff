@@ -8,6 +8,8 @@ from ui.filelist import FileList
 from ui.pad import CursesPad
 
 class CursesUi:
+    FILELIST_SCROLL_OFFSET = 1
+
     CURSES_BUTTON5_PRESSED = 0x00200000 # thanks python
 
     def __init__(self, diff_args: typing.Optional[typing.List[str]] = None):
@@ -15,7 +17,6 @@ class CursesUi:
 
         self.stdscr = None
         self.filelist_column_width: int = 24
-        self.filelist_scroll_offset: int = 0
 
         self.pad_filelist: FileList = None
         self.pad_diff: DiffPad = None
@@ -127,7 +128,7 @@ class CursesUi:
             return False
 
         self._select_file(self.selected_file_idx + 1)
-        if self.selected_file_idx - self.pad_filelist.y >= self.pad_filelist.height - 1 - self.filelist_scroll_offset:
+        if self.selected_file_idx - self.pad_filelist.y >= self.pad_filelist.height - 1 - CursesUi.FILELIST_SCROLL_OFFSET:
             self.pad_filelist.scroll(1, 0)
         return True
 
@@ -136,7 +137,7 @@ class CursesUi:
             return False
 
         self._select_file(self.selected_file_idx - 1)
-        if self.selected_file_idx - self.pad_filelist.y <= self.filelist_scroll_offset:
+        if self.selected_file_idx - self.pad_filelist.y <= CursesUi.FILELIST_SCROLL_OFFSET:
             self.pad_filelist.scroll(-1, 0)
         return True
 
