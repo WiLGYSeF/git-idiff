@@ -159,7 +159,8 @@ class CursesUi:
 
         max_y, max_x = self.pad_diff.pad.getmaxyx()
         longest_line = self.diff_longest_line()
-        if len(self.diff_contents) >= max_y or longest_line >= max_x:
+        if len(self.diff_contents) != max_y or longest_line != max_x:
+            self.pad_diff.refresh(0, 0)
             self.pad_diff.pad.resize(len(self.diff_contents) + 1, max(longest_line + 1, max_x))
 
         idx = 0

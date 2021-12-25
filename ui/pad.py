@@ -25,16 +25,17 @@ class CursesPad:
         self.refresh(self._y + offy, self._x + offx)
 
     def refresh(self, y: int, x: int) -> None:
-        max_y, max_x = self.window.getmaxyx()
+        wmax_y, wmax_x = self.window.getmaxyx()
+        pmax_y, pmax_x = self.pad.getmaxyx()
 
-        self._y = _clamp(y, 0, self.height - 1)
-        self._x = _clamp(x, 0, self.width - 1)
+        self._y = _clamp(y, 0, pmax_y - self.height - 1)
+        self._x = _clamp(x, 0, pmax_x - self.width - 1)
 
         self.pad.refresh(
             self._y, self._x,
             self.offset_y, self.offset_x,
-            min(self.height + self.offset_y, max_y) - 1,
-            min(self.width + self.offset_x, max_x) - 1
+            min(self.height + self.offset_y, wmax_y) - 1,
+            min(self.width + self.offset_x, wmax_x) - 1
         )
 
 def _clamp(val: int, minval: int, maxval: int) -> int:
