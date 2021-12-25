@@ -19,9 +19,9 @@ class CursesUi:
         self.filelist_column_width: int = 24
         self.filelist_scroll_offset: int = 0
 
-        self.pad_filelist: typing.Optional[CursesPad] = None
-        self.pad_diff: typing.Optional[CursesPad] = None
-        self.pad_statusbar: typing.Optional[CursesPad] = None
+        self.pad_filelist: CursesPad = None
+        self.pad_diff: CursesPad = None
+        self.pad_statusbar: CursesPad = None
 
         self.filelist: typing.List[GitFile] = []
         self.total_insertions: int = 0

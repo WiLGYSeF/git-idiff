@@ -47,7 +47,7 @@ class GitDiff:
     def __init__(self, args: typing.Optional[typing.List[str]] = None):
         self.line_prefix_str: str = ''
 
-        self.args = self.sanitize_args(args) if args is not None else []
+        self.args = self._sanitize_args(args) if args is not None else []
 
     def get_filenames(self) -> typing.List[GitFile]:
         output = subprocess.check_output([
@@ -100,7 +100,7 @@ class GitDiff:
 
         return headers, lines
 
-    def sanitize_args(self, args: typing.List[str]) -> typing.List[str]:
+    def _sanitize_args(self, args: typing.List[str]) -> typing.List[str]:
         result = []
 
         for arg in args:
@@ -109,18 +109,19 @@ class GitDiff:
             if arg[0] == '-':
                 if len(arg) > 1:
                     if arg[1] != '-':
-                        idx = 2
+                        idx = 1
                         while idx < len(arg) and not arg[idx] in GitDiff.WHITELIST_ARGS_SINGLE_PARAM:
                             if arg[idx] not in GitDiff.WHITELIST_ARGS_SINGLE:
                                 arg = arg[:idx] + arg[idx + 1:]
                             else:
                                 idx += 1
+                        if len(arg) == 1:
+                            continue
                     else:
                         if not any(arg.startswith(warg) for warg in GitDiff.WHITELIST_ARGS):
                             continue
                         if arg.startswith('--line-prefix='):
                             self.line_prefix_str = arg[len('--line-prefix='):]
-
             result.append(arg)
 
         return result
@@ -129,4 +130,4 @@ class GitDiff:
         return len(self.line_prefix_str) != 0
 
     def noprefix(self, val: typing.AnyStr) -> typing.AnyStr:
-        return val[len(self.line_prefix_str):]
+        return val[len(self.line_prefix_str):] if len(self.line_prefix_str) != 0 else val
