@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-import gui
-from gui import UiCurses
+from ui.cui import CursesUi, curses_initialize
 
-ui = UiCurses()
-gui.initialize(ui)
+cui = CursesUi()
+curses_initialize(cui)
