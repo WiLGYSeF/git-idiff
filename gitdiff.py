@@ -50,7 +50,7 @@ def get_filenames(
 def get_file_diff(
     fname: str,
     args: typing.Optional[typing.List[str]] = None
-) -> typing.List[str]:
+) -> typing.Tuple[typing.List[str], typing.List[str]]:
     cmdargs = ['git', 'diff']
     if args is not None:
         cmdargs.extend(_sanitize_args(args))
@@ -59,22 +59,17 @@ def get_file_diff(
     output = subprocess.check_output(cmdargs)
     lines = output.decode('utf-8').split('\n')
 
-    """
+    headers_regex = re.compile(
+        r'^(diff|(old|new) mode|(new|deleted) file|copy|rename|((dis)?similarity )?index|---|\+\+\+) '
+    )
     headers = []
-    idx = 0
 
-    headers_regex = re.compile(r'^(diff|(old|new) mode|(new|deleted) file|copy|rename|((dis)?similarity )?index|---|\+\+\+) ')
-
-    while idx < len(lines):
-        if headers_regex.search(lines[idx]) is None:
+    while len(lines) > 0:
+        if headers_regex.search(lines[0]) is None:
             break
-        idx += 1
-
-    for _ in range(idx):
         headers.append(lines.pop(0))
-    """
 
-    return lines
+    return headers, lines
 
 def _sanitize_args(args: typing.List[str]) -> typing.List[str]:
     result = []

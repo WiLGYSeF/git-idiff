@@ -8,6 +8,7 @@ class CursesUi:
     COLOR_ADD = 1
     COLOR_REMOVE = 2
     COLOR_SECTION = 3
+    COLOR_HEADER = 4
 
     CURSES_BUTTON5_PRESSED = 0x00200000 # thanks python
 
@@ -26,6 +27,7 @@ class CursesUi:
         self.total_insertions: int = 0
         self.total_deletions: int = 0
 
+        self.diff_headers: typing.List[str] = []
         self.diff_contents: typing.List[str] = []
 
         self.selected_file: typing.Optional[str] = None
@@ -43,6 +45,7 @@ class CursesUi:
         curses.init_pair(CursesUi.COLOR_ADD, curses.COLOR_GREEN, -1)
         curses.init_pair(CursesUi.COLOR_REMOVE, curses.COLOR_RED, -1)
         curses.init_pair(CursesUi.COLOR_SECTION, curses.COLOR_CYAN, -1)
+        curses.init_pair(CursesUi.COLOR_HEADER, curses.COLOR_MAGENTA, -1)
 
         self.pad_filelist = CursesPad(stdscr,
             height = lines - 1,
@@ -159,7 +162,7 @@ class CursesUi:
         self.update_statusbar()
 
     def get_file_diff(self) -> None:
-        self.diff_contents = gitdiff.get_file_diff(self.selected_file, self.diff_args)
+        self.diff_headers, self.diff_contents = gitdiff.get_file_diff(self.selected_file, self.diff_args)
 
     def toggle_filelist(self) -> None:
         if self.filelist_visible:
@@ -250,11 +253,19 @@ class CursesUi:
 
         max_y, max_x = self.pad_diff.pad.getmaxyx()
         longest_line = self.diff_longest_line()
-        if len(self.diff_contents) != max_y or longest_line != max_x:
+        if self.diff_lines() != max_y or longest_line != max_x:
             self.pad_diff.refresh(0, 0)
-            self.pad_diff.pad.resize(len(self.diff_contents) + 1, max(longest_line + 1, max_x))
+            self.pad_diff.pad.resize(self.diff_lines() + 1, max(longest_line + 1, max_x))
 
         idx = 0
+        for line in self.diff_headers:
+            if len(line) == 0:
+                idx += 1
+                continue
+
+            self.pad_diff.pad.addstr(idx, 0, line, curses.color_pair(CursesUi.COLOR_HEADER))
+            idx += 1
+
         for line in self.diff_contents:
             if len(line) == 0:
                 idx += 1
@@ -279,12 +290,12 @@ class CursesUi:
         _, max_x = self.pad_statusbar.pad.getmaxyx()
 
         diff_longest_line = self.diff_longest_line()
-        diff_linenum = min(len(self.diff_contents), self.pad_diff.height + self.pad_diff.y)
+        diff_linenum = min(self.diff_lines(), self.pad_diff.height + self.pad_diff.y)
         diff_colnum = min(diff_longest_line, self.pad_diff.width + self.pad_diff.x)
 
         leftstring = f' {self.selected_file_idx + 1} / {len(self.filelist)} files  +{self.total_insertions}  -{self.total_deletions}'
         centerstring = ' '
-        rightstring = f'({diff_linenum}, {diff_colnum}) / ({len(self.diff_contents)}, {diff_longest_line}) '
+        rightstring = f'({diff_linenum}, {diff_colnum}) / ({self.diff_lines()}, {diff_longest_line}) '
 
         leftcenter_pad = ' ' * (
             (max_x - (len(leftstring) + len(centerstring) + len(rightstring))) // 2
@@ -301,10 +312,14 @@ class CursesUi:
 
         self.pad_statusbar.refresh(0, 0)
 
+    def diff_lines(self) -> int:
+        return len(self.diff_headers) + len(self.diff_contents)
+
     def diff_longest_line(self) -> int:
-        if len(self.diff_contents) == 0:
-            return 0
-        return max( len(line) for line in self.diff_contents )
+        return max(
+            max( len(line) for line in self.diff_headers ),
+            max( len(line) for line in self.diff_contents )
+        ) if self.diff_lines() != 0 else 0
 
 def curses_initialize(cui: CursesUi) -> None:
     curses.wrapper(cui.run)
