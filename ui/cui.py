@@ -23,7 +23,7 @@ class CursesUi:
         self.pad_diff: typing.Optional[CursesPad] = None
         self.pad_statusbar: typing.Optional[CursesPad] = None
 
-        self.filelist: gitdiff.FileList = []
+        self.filelist: typing.List[gitdiff.GitFile] = []
         self.total_insertions: int = 0
         self.total_deletions: int = 0
 

@@ -8,11 +8,9 @@ class GitFile(typing.NamedTuple):
     insertions: typing.Optional[int]
     deletions: typing.Optional[int]
 
-FileList = typing.List[GitFile]
-
 def get_filenames(
     args: typing.Optional[typing.List[str]] = None
-) -> FileList:
+) -> typing.List[GitFile]:
     cmdargs = ['git', 'diff', '--numstat', '-z']
     if args is not None:
         cmdargs.extend(_sanitize_args(args))
@@ -21,7 +19,7 @@ def get_filenames(
     output_split = output.split(b'\0')
     idx = 0
 
-    results: FileList = []
+    results: typing.List[GitFile] = []
 
     while idx < len(output_split):
         parts = output_split[idx].split(b'\t')
@@ -72,13 +70,58 @@ def get_file_diff(
     return headers, lines
 
 def _sanitize_args(args: typing.List[str]) -> typing.List[str]:
+    whitelist_args = [
+        '--no-index',
+        '--cached', '--staged',
+        '--merge-base',
+        '--unified',
+        '--indent-heuristic', '--no-indent-heuristic',
+        '--minimal',
+        '--patience', '--histogram', '--anchored', '--diff-algorithm',
+        '--full-index',
+        '--break-rewrites',
+        '--find-renames',
+        '--find-copies', '--find-copies-harder',
+        '--irreversible-delete',
+        '--diff-filter',
+        '--find-object',
+        '--pickaxe-all',
+        '--pickaxe-regex',
+        '--skip-to', '--rotate-to',
+        '--relative', '--no-relative',
+        '--text',
+        '--ignore-cr-at-eol', '--ignore-space-at-eol',
+        '--ignore-space-change', '--ignore-all-space', '--ignore-blank-lines',
+        '--ignore-matching-lines',
+        '--inter-hunk-context', '--function-context',
+        '--ext-diff', '--no-ext-diff',
+        '--textconv', '--no-textconv',
+        '--ignore-submodules',
+        '--src-prefix', '--dst-prefix', '--no-prefix',
+        #'--line-prefix', # messes up coloring
+        '--ita-invisible-in-index', '--ita-visible-in-index',
+        '--base', '--ours', '--theirs',
+    ]
+    whitelist_args_single = 'DRabwW1230'
+    whitelist_args_single_param = 'UBMClSGOI'
     result = []
 
     for arg in args:
         if arg == '--':
             break
         if arg[0] == '-':
-            continue
+            if len(arg) > 1:
+                if arg[1] != '-':
+                    idx = 2
+                    while idx < len(arg) and not arg[idx] in whitelist_args_single_param:
+                        if arg[idx] not in whitelist_args_single:
+                            arg = arg[:idx] + arg[idx + 1:]
+                        else:
+                            idx += 1
+                else:
+                    if not any(arg.startswith(warg) for warg in whitelist_args):
+                        continue
+
         result.append(arg)
 
     return result
