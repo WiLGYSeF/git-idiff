@@ -1,7 +1,5 @@
 import curses
-import typing
 
-import ui.colors
 from ui.diff import DiffPad
 from ui.pad import CursesPad
 

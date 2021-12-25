@@ -1,6 +1,8 @@
 import curses
+import typing
 
-import ui.colors
+from gitdiff import GitFile
+from ui.colors import COLOR_ADD, COLOR_REMOVE
 from ui.pad import CursesPad
 
 class FileList(CursesPad):
@@ -37,28 +39,8 @@ class FileList(CursesPad):
 
         idx = 0
         for file in filelist:
-            fname = file.filename
-            added = file.insertions
-            removed = file.deletions
-
-            if added is not None:
-                added_str = str(added)
-            else:
-                added_str = '-'
-
-            if removed is not None:
-                removed_str = str(removed)
-            else:
-                removed_str = '-'
-
-            total_length = len(f'{added_str} {removed_str} {fname}')
+            insertions, deletions, fname = _gitfile_to_entry(file, max_x)
             length = 0
-
-            if total_length > max_x:
-                fname = '##' + fname[
-                    max(len(fname) - (max_x - len(f'{added_str} {removed_str} ##')), 0)
-                    :
-                ]
 
             def write(val, attr=curses.A_NORMAL):
                 nonlocal length
@@ -72,12 +54,26 @@ class FileList(CursesPad):
                     self.pad.addstr(idx, length, val, attr)
                     length += len(val)
 
-            write(added_str, curses.color_pair(ui.colors.COLOR_ADD))
+            write(insertions, curses.color_pair(COLOR_ADD))
             write(' ')
-            write(removed_str, curses.color_pair(ui.colors.COLOR_REMOVE))
+            write(deletions, curses.color_pair(COLOR_REMOVE))
             write(' ')
             write(' ' * (max_x - length - len(fname)))
             write(fname)
             idx += 1
 
         self.refresh(self.y, 0)
+
+def _gitfile_to_entry(file: GitFile, max_x: int) -> typing.Tuple[str, str, str]:
+    added_str = str(file.insertions) if file.insertions is not None else '-'
+    removed_str = str(file.deletions) if file.deletions is not None else '-'
+    fname = file.filename
+
+    total_length = len(f'{added_str} {removed_str} {fname}')
+    if total_length > max_x:
+        fname = '##' + fname[
+            max(len(fname) - (max_x - len(f'{added_str} {removed_str} ##')), 0)
+            :
+        ]
+
+    return (added_str, removed_str, fname)
