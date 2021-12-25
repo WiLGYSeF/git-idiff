@@ -14,6 +14,7 @@ class CursesUi:
 
         self.stdscr = None
         self.filelist_column_width: int = 24
+        self.filelist_scroll_offset: int = 0
 
         self.pad_filelist: typing.Optional[CursesPad] = None
         self.pad_diff: typing.Optional[CursesPad] = None
@@ -92,13 +93,19 @@ class CursesUi:
     def select_next_file(self) -> bool:
         if self.selected_file_idx == len(self.filelist) - 1:
             return False
+
         self._select_file(self.selected_file_idx + 1)
+        if self.selected_file_idx - self.pad_filelist.y >= self.pad_filelist.height - 1 - self.filelist_scroll_offset:
+            self.pad_filelist.scroll(1, 0)
         return True
 
     def select_prev_file(self) -> bool:
         if self.selected_file_idx == 0:
             return False
+
         self._select_file(self.selected_file_idx - 1)
+        if self.selected_file_idx - self.pad_filelist.y <= self.filelist_scroll_offset:
+            self.pad_filelist.scroll(-1, 0)
         return True
 
     def _select_file(self, idx: int) -> None:
@@ -162,7 +169,7 @@ class CursesUi:
             write(' ' * (max_x - length))
             idx += 1
 
-        self.pad_filelist.refresh(0, 0)
+        self.pad_filelist.refresh(self.pad_filelist.y, 0)
 
     def update_diff(self) -> None:
         self.pad_diff.pad.erase()
