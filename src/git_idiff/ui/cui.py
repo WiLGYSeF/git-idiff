@@ -2,8 +2,8 @@ import curses
 import typing
 
 from gitdiff import GitDiff, GitFile
-import ui.colors
 from ui.colors import init_colors
+from ui.diff import DiffPad
 from ui.filelist import FileList
 from ui.pad import CursesPad
 
@@ -18,7 +18,7 @@ class CursesUi:
         self.filelist_scroll_offset: int = 0
 
         self.pad_filelist: FileList = None
-        self.pad_diff: CursesPad = None
+        self.pad_diff: DiffPad = None
         self.pad_statusbar: CursesPad = None
 
         self.filelist: typing.List[GitFile] = []
@@ -41,12 +41,7 @@ class CursesUi:
         init_colors()
 
         self.pad_filelist = FileList(stdscr, self.filelist_column_width)
-        self.pad_diff = CursesPad(stdscr,
-            height = lines - 1,
-            width = columns - self.filelist_column_width,
-            offset_y = 0,
-            offset_x = self.filelist_column_width
-        )
+        self.pad_diff = DiffPad(stdscr, self.gitdiff, self.filelist_column_width)
         self.pad_statusbar = CursesPad(stdscr,
             height = 2,
             width = columns,
@@ -182,54 +177,12 @@ class CursesUi:
         self.pad_filelist.update(self.filelist, self.selected_file_idx)
 
     def update_diff(self) -> None:
-        self.pad_diff.pad.erase()
-
-        max_y, max_x = self.pad_diff.pad.getmaxyx()
-        longest_line = self.diff_longest_line()
-        if self.diff_lines() != max_y or longest_line != max_x:
-            self.pad_diff.refresh(0, 0)
-            self.pad_diff.pad.resize(self.diff_lines() + 1, max(longest_line + 1, max_x))
-
-        idx = 0
-        for line in self.diff_headers:
-            if len(line) == 0:
-                idx += 1
-                continue
-
-            if self.gitdiff.has_prefix():
-                self.pad_diff.pad.addstr(idx, 0, self.gitdiff.line_prefix_str)
-                self.pad_diff.pad.addstr(
-                    idx, len(self.gitdiff.line_prefix_str),
-                    self.gitdiff.noprefix(line),
-                    curses.color_pair(ui.colors.COLOR_HEADER)
-                )
-            else:
-                self.pad_diff.pad.addstr(idx, 0, line, curses.color_pair(ui.colors.COLOR_HEADER))
-            idx += 1
-
-        for line in self.diff_contents:
-            if len(line) == 0:
-                idx += 1
-                continue
-
-            noprefix = self.gitdiff.noprefix(line)
-            attr = curses.A_NORMAL
-
-            if noprefix[0] == '+':
-                attr = curses.color_pair(ui.colors.COLOR_ADD)
-            elif noprefix[0] == '-':
-                attr = curses.color_pair(ui.colors.COLOR_REMOVE)
-            elif noprefix[0] == '@':
-                attr = curses.color_pair(ui.colors.COLOR_SECTION)
-
-            if self.gitdiff.has_prefix():
-                self.pad_diff.pad.addstr(idx, 0, self.gitdiff.line_prefix_str)
-                self.pad_diff.pad.addstr(idx, len(self.gitdiff.line_prefix_str), noprefix, attr)
-            else:
-                self.pad_diff.pad.addstr(idx, 0, line, attr)
-            idx += 1
-
-        self.pad_diff.refresh(0, 0)
+        self.pad_diff.update(
+            self.diff_headers,
+            self.diff_contents,
+            self.diff_lines(),
+            self.diff_longest_line()
+        )
 
     def update_statusbar(self) -> None:
         self.pad_statusbar.pad.erase()

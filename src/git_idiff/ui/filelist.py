@@ -4,8 +4,8 @@ import ui.colors
 from ui.pad import CursesPad
 
 class FileList(CursesPad):
-    def __init__(self, stdscr, column_width):
-        self.column_width = column_width
+    def __init__(self, stdscr, column_width: int):
+        self.column_width: int = column_width
 
         lines, _ = stdscr.getmaxyx()
 
