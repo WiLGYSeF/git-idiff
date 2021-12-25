@@ -1,7 +1,7 @@
 import curses
 import typing
 
-import gitdiff
+from gitdiff import GitDiff, GitFile
 from ui.pad import CursesPad
 
 class CursesUi:
@@ -13,7 +13,7 @@ class CursesUi:
     CURSES_BUTTON5_PRESSED = 0x00200000 # thanks python
 
     def __init__(self, diff_args: typing.Optional[typing.List[str]] = None):
-        self.diff_args: typing.List[str] = diff_args if diff_args is not None else []
+        self.gitdiff: GitDiff = GitDiff(diff_args)
 
         self.stdscr = None
         self.filelist_column_width: int = 24
@@ -23,7 +23,7 @@ class CursesUi:
         self.pad_diff: typing.Optional[CursesPad] = None
         self.pad_statusbar: typing.Optional[CursesPad] = None
 
-        self.filelist: typing.List[gitdiff.GitFile] = []
+        self.filelist: typing.List[GitFile] = []
         self.total_insertions: int = 0
         self.total_deletions: int = 0
 
@@ -126,7 +126,7 @@ class CursesUi:
             self.update_statusbar()
 
     def get_files(self) -> None:
-        self.filelist = gitdiff.get_filenames(self.diff_args)
+        self.filelist = self.gitdiff.get_filenames()
         self.update_filelist()
         self.update_statusbar()
 
@@ -162,7 +162,7 @@ class CursesUi:
         self.update_statusbar()
 
     def get_file_diff(self) -> None:
-        self.diff_headers, self.diff_contents = gitdiff.get_file_diff(self.selected_file, self.diff_args)
+        self.diff_headers, self.diff_contents = self.gitdiff.get_file_diff(self.selected_file)
 
     def toggle_filelist(self) -> None:
         if self.filelist_visible:
@@ -263,7 +263,15 @@ class CursesUi:
                 idx += 1
                 continue
 
-            self.pad_diff.pad.addstr(idx, 0, line, curses.color_pair(CursesUi.COLOR_HEADER))
+            if self.gitdiff.has_prefix():
+                self.pad_diff.pad.addstr(idx, 0, self.gitdiff.line_prefix_str)
+                self.pad_diff.pad.addstr(
+                    idx, len(self.gitdiff.line_prefix_str),
+                    self.gitdiff.noprefix(line),
+                    curses.color_pair(CursesUi.COLOR_HEADER)
+                )
+            else:
+                self.pad_diff.pad.addstr(idx, 0, line, curses.color_pair(CursesUi.COLOR_HEADER))
             idx += 1
 
         for line in self.diff_contents:
@@ -271,15 +279,21 @@ class CursesUi:
                 idx += 1
                 continue
 
+            noprefix = self.gitdiff.noprefix(line)
             attr = curses.A_NORMAL
-            if line[0] == '+':
+
+            if noprefix[0] == '+':
                 attr = curses.color_pair(CursesUi.COLOR_ADD)
-            elif line[0] == '-':
+            elif noprefix[0] == '-':
                 attr = curses.color_pair(CursesUi.COLOR_REMOVE)
-            elif line[0] == '@':
+            elif noprefix[0] == '@':
                 attr = curses.color_pair(CursesUi.COLOR_SECTION)
 
-            self.pad_diff.pad.addstr(idx, 0, line, attr)
+            if self.gitdiff.has_prefix():
+                self.pad_diff.pad.addstr(idx, 0, self.gitdiff.line_prefix_str)
+                self.pad_diff.pad.addstr(idx, len(self.gitdiff.line_prefix_str), noprefix, attr)
+            else:
+                self.pad_diff.pad.addstr(idx, 0, line, attr)
             idx += 1
 
         self.pad_diff.refresh(0, 0)

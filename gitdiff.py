@@ -8,69 +8,8 @@ class GitFile(typing.NamedTuple):
     insertions: typing.Optional[int]
     deletions: typing.Optional[int]
 
-def get_filenames(
-    args: typing.Optional[typing.List[str]] = None
-) -> typing.List[GitFile]:
-    cmdargs = ['git', 'diff', '--numstat', '-z']
-    if args is not None:
-        cmdargs.extend(_sanitize_args(args))
-
-    output = subprocess.check_output(cmdargs)
-    output_split = output.split(b'\0')
-    idx = 0
-
-    results: typing.List[GitFile] = []
-
-    while idx < len(output_split):
-        parts = output_split[idx].split(b'\t')
-        idx += 1
-        if len(parts) != 3:
-            continue
-
-        insertions, deletions, fname = parts
-        oldfname = None
-
-        if len(fname) == 0:
-            oldfname = output_split[idx].decode('utf-8')
-            idx += 1
-            fname = output_split[idx]
-            idx += 1
-
-        results.append(GitFile(
-            fname.decode('utf-8'),
-            oldfname,
-            int(parts[0]) if parts[0] != b'-' else None,
-            int(parts[1]) if parts[1] != b'-' else None
-        ))
-
-    return results
-
-def get_file_diff(
-    fname: str,
-    args: typing.Optional[typing.List[str]] = None
-) -> typing.Tuple[typing.List[str], typing.List[str]]:
-    cmdargs = ['git', 'diff']
-    if args is not None:
-        cmdargs.extend(_sanitize_args(args))
-    cmdargs.extend(('--', fname))
-
-    output = subprocess.check_output(cmdargs)
-    lines = output.decode('utf-8').split('\n')
-
-    headers_regex = re.compile(
-        r'^(diff|(old|new) mode|(new|deleted) file|copy|rename|((dis)?similarity )?index|---|\+\+\+) '
-    )
-    headers = []
-
-    while len(lines) > 0:
-        if headers_regex.search(lines[0]) is None:
-            break
-        headers.append(lines.pop(0))
-
-    return headers, lines
-
-def _sanitize_args(args: typing.List[str]) -> typing.List[str]:
-    whitelist_args = [
+class GitDiff:
+    WHITELIST_ARGS = [
         '--no-index',
         '--cached', '--staged',
         '--merge-base',
@@ -98,30 +37,96 @@ def _sanitize_args(args: typing.List[str]) -> typing.List[str]:
         '--textconv', '--no-textconv',
         '--ignore-submodules',
         '--src-prefix', '--dst-prefix', '--no-prefix',
-        #'--line-prefix', # messes up coloring
+        '--line-prefix',
         '--ita-invisible-in-index', '--ita-visible-in-index',
         '--base', '--ours', '--theirs',
     ]
-    whitelist_args_single = 'DRabwW1230'
-    whitelist_args_single_param = 'UBMClSGOI'
-    result = []
+    WHITELIST_ARGS_SINGLE = 'DRabwW1230'
+    WHITELIST_ARGS_SINGLE_PARAM = 'UBMClSGOI'
 
-    for arg in args:
-        if arg == '--':
-            break
-        if arg[0] == '-':
-            if len(arg) > 1:
-                if arg[1] != '-':
-                    idx = 2
-                    while idx < len(arg) and not arg[idx] in whitelist_args_single_param:
-                        if arg[idx] not in whitelist_args_single:
-                            arg = arg[:idx] + arg[idx + 1:]
-                        else:
-                            idx += 1
-                else:
-                    if not any(arg.startswith(warg) for warg in whitelist_args):
-                        continue
+    def __init__(self, args: typing.Optional[typing.List[str]] = None):
+        self.line_prefix_str: str = ''
 
-        result.append(arg)
+        self.args = self.sanitize_args(args) if args is not None else []
 
-    return result
+    def get_filenames(self) -> typing.List[GitFile]:
+        output = subprocess.check_output([
+            'git', 'diff', '--numstat', '-z', *self.args
+        ])
+        output_split = output.split(b'\0')
+        idx = 0
+
+        results: typing.List[GitFile] = []
+
+        while idx < len(output_split):
+            parts = self.noprefix(output_split[idx]).split(b'\t')
+            idx += 1
+            if len(parts) != 3:
+                continue
+
+            insertions, deletions, fname = parts
+            oldfname = None
+
+            if len(fname) == 0:
+                oldfname = self.noprefix(output_split[idx]).decode('utf-8')
+                idx += 1
+                fname = self.noprefix(output_split[idx])
+                idx += 1
+
+            results.append(GitFile(
+                fname.decode('utf-8'),
+                oldfname,
+                int(insertions) if insertions != b'-' else None,
+                int(deletions) if deletions != b'-' else None
+            ))
+
+        return results
+
+    def get_file_diff(self,fname: str) -> typing.Tuple[typing.List[str], typing.List[str]]:
+        output = subprocess.check_output([
+            'git', 'diff', *self.args, '--', fname
+        ])
+        lines = output.decode('utf-8').split('\n')
+
+        headers_regex = re.compile(
+            r'^(diff|(old|new) mode|(new|deleted) file|copy|rename|((dis)?similarity )?index|---|\+\+\+) '
+        )
+        headers = []
+
+        while len(lines) > 0:
+            if headers_regex.search(self.noprefix(lines[0])) is None:
+                break
+            headers.append(lines.pop(0))
+
+        return headers, lines
+
+    def sanitize_args(self, args: typing.List[str]) -> typing.List[str]:
+        result = []
+
+        for arg in args:
+            if arg == '--':
+                break
+            if arg[0] == '-':
+                if len(arg) > 1:
+                    if arg[1] != '-':
+                        idx = 2
+                        while idx < len(arg) and not arg[idx] in GitDiff.WHITELIST_ARGS_SINGLE_PARAM:
+                            if arg[idx] not in GitDiff.WHITELIST_ARGS_SINGLE:
+                                arg = arg[:idx] + arg[idx + 1:]
+                            else:
+                                idx += 1
+                    else:
+                        if not any(arg.startswith(warg) for warg in GitDiff.WHITELIST_ARGS):
+                            continue
+                        if arg.startswith('--line-prefix='):
+                            self.line_prefix_str = arg[len('--line-prefix='):]
+
+            result.append(arg)
+
+        return result
+
+    def has_prefix(self) -> bool:
+        return len(self.line_prefix_str) != 0
+
+    def noprefix(self, val: typing.AnyStr) -> typing.AnyStr:
+        return val[len(self.line_prefix_str):]
