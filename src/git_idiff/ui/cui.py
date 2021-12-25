@@ -2,14 +2,12 @@ import curses
 import typing
 
 from gitdiff import GitDiff, GitFile
+import ui.colors
+from ui.colors import init_colors
+from ui.filelist import FileList
 from ui.pad import CursesPad
 
 class CursesUi:
-    COLOR_ADD = 1
-    COLOR_REMOVE = 2
-    COLOR_SECTION = 3
-    COLOR_HEADER = 4
-
     CURSES_BUTTON5_PRESSED = 0x00200000 # thanks python
 
     def __init__(self, diff_args: typing.Optional[typing.List[str]] = None):
@@ -19,7 +17,7 @@ class CursesUi:
         self.filelist_column_width: int = 24
         self.filelist_scroll_offset: int = 0
 
-        self.pad_filelist: CursesPad = None
+        self.pad_filelist: FileList = None
         self.pad_diff: CursesPad = None
         self.pad_statusbar: CursesPad = None
 
@@ -40,19 +38,9 @@ class CursesUi:
 
         curses.curs_set(False)
         curses.mousemask(-1)
+        init_colors()
 
-        curses.use_default_colors()
-        curses.init_pair(CursesUi.COLOR_ADD, curses.COLOR_GREEN, -1)
-        curses.init_pair(CursesUi.COLOR_REMOVE, curses.COLOR_RED, -1)
-        curses.init_pair(CursesUi.COLOR_SECTION, curses.COLOR_CYAN, -1)
-        curses.init_pair(CursesUi.COLOR_HEADER, curses.COLOR_MAGENTA, -1)
-
-        self.pad_filelist = CursesPad(stdscr,
-            height = lines - 1,
-            width = self.filelist_column_width,
-            offset_y = 0,
-            offset_x = 0
-        )
+        self.pad_filelist = FileList(stdscr, self.filelist_column_width)
         self.pad_diff = CursesPad(stdscr,
             height = lines - 1,
             width = columns - self.filelist_column_width,
@@ -127,6 +115,15 @@ class CursesUi:
 
     def get_files(self) -> None:
         self.filelist = self.gitdiff.get_filenames()
+        self.total_insertions = 0
+        self.total_deletions = 0
+
+        for file in self.filelist:
+            if file.insertions is not None:
+                self.total_insertions += file.insertions
+            if file.deletions is not None:
+                self.total_deletions += file.deletions
+
         self.update_filelist()
         self.update_statusbar()
 
@@ -182,71 +179,7 @@ class CursesUi:
         self.update_diff()
 
     def update_filelist(self) -> None:
-        if not self.filelist_visible:
-            return
-
-        self.pad_filelist.pad.erase()
-
-        max_y, max_x = self.pad_filelist.pad.getmaxyx()
-        if len(self.filelist) >= max_y:
-            self.pad_filelist.pad.resize(len(self.filelist) + 1, max_x)
-
-        # create a right border and decrease max_x to account for it
-        self.pad_filelist.pad.border(
-            ' ', 0, ' ', ' ',
-            ' ', curses.ACS_VLINE, ' ', curses.ACS_VLINE
-        )
-        max_x -= 1
-
-        self.total_insertions = 0
-        self.total_deletions = 0
-
-        idx = 0
-        for file in self.filelist:
-            fname = file.filename
-            added = file.insertions
-            removed = file.deletions
-
-            if added is not None:
-                added_str = str(added)
-                self.total_insertions += added
-            else:
-                added_str = '-'
-
-            if removed is not None:
-                removed_str = str(removed)
-                self.total_deletions += removed
-
-            total_length = len(f'{added_str} {removed_str} {fname}')
-            length = 0
-
-            if total_length > max_x:
-                fname = '##' + fname[
-                    max(len(fname) - (max_x - len(f'{added_str} {removed_str} ##')), 0)
-                    :
-                ]
-
-            def write(val, attr=curses.A_NORMAL):
-                nonlocal length
-
-                if idx == self.selected_file_idx:
-                    attr |= curses.A_REVERSE
-
-                if length + len(val) >= max_x:
-                    val = val[len(val) - (max_x - length):]
-                if len(val) > 0:
-                    self.pad_filelist.pad.addstr(idx, length, val, attr)
-                    length += len(val)
-
-            write(added_str, curses.color_pair(CursesUi.COLOR_ADD))
-            write(' ')
-            write(removed_str, curses.color_pair(CursesUi.COLOR_REMOVE))
-            write(' ')
-            write(' ' * (max_x - length - len(fname)))
-            write(fname)
-            idx += 1
-
-        self.pad_filelist.refresh(self.pad_filelist.y, 0)
+        self.pad_filelist.update(self.filelist, self.selected_file_idx)
 
     def update_diff(self) -> None:
         self.pad_diff.pad.erase()
@@ -268,10 +201,10 @@ class CursesUi:
                 self.pad_diff.pad.addstr(
                     idx, len(self.gitdiff.line_prefix_str),
                     self.gitdiff.noprefix(line),
-                    curses.color_pair(CursesUi.COLOR_HEADER)
+                    curses.color_pair(ui.colors.COLOR_HEADER)
                 )
             else:
-                self.pad_diff.pad.addstr(idx, 0, line, curses.color_pair(CursesUi.COLOR_HEADER))
+                self.pad_diff.pad.addstr(idx, 0, line, curses.color_pair(ui.colors.COLOR_HEADER))
             idx += 1
 
         for line in self.diff_contents:
@@ -283,11 +216,11 @@ class CursesUi:
             attr = curses.A_NORMAL
 
             if noprefix[0] == '+':
-                attr = curses.color_pair(CursesUi.COLOR_ADD)
+                attr = curses.color_pair(ui.colors.COLOR_ADD)
             elif noprefix[0] == '-':
-                attr = curses.color_pair(CursesUi.COLOR_REMOVE)
+                attr = curses.color_pair(ui.colors.COLOR_REMOVE)
             elif noprefix[0] == '@':
-                attr = curses.color_pair(CursesUi.COLOR_SECTION)
+                attr = curses.color_pair(ui.colors.COLOR_SECTION)
 
             if self.gitdiff.has_prefix():
                 self.pad_diff.pad.addstr(idx, 0, self.gitdiff.line_prefix_str)
