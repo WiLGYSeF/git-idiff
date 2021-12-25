@@ -25,9 +25,7 @@ def get_filenames(
     ]
 
 def get_file_diff(fname: str) -> typing.List[str]:
-    output = subprocess.check_output([
-        'git', 'diff', fname
-    ])
+    output = subprocess.check_output(['git', 'diff', fname])
     lines = output.decode('utf-8').split('\n')
     headers = []
     idx = 0

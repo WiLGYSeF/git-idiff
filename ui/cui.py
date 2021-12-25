@@ -20,6 +20,7 @@ class CursesUi:
         self.diff_contents: typing.List[str] = []
 
         self.selected_file: typing.Optional[str] = None
+        self.selected_file_idx: int = -1
         self.diff_linenum: int = 1
 
     def run(self, stdscr) -> None:
@@ -49,16 +50,19 @@ class CursesUi:
         stdscr.refresh()
 
         self.filelist = gitdiff.get_filenames()
-        self.diff_contents = gitdiff.get_file_diff(self.filelist[0][0])
-
         self.update_filelist()
-        self.update_diff()
+
+        self._select_file(0)
 
         while True:
             c = self.input()
             if c < 256:
                 ch = chr(c)
-                if ch in 'Qq':
+                if ch == 'n':
+                    self.select_next_file()
+                elif ch == 'p':
+                    self.select_prev_file()
+                elif ch == 'q':
                     break
             elif c == curses.KEY_UP:
                 self.pad_diff.scroll(-1, 0)
@@ -71,8 +75,25 @@ class CursesUi:
             elif c == curses.KEY_RESIZE:
                 pass
 
-    def input(self) -> int:
-        return self.stdscr.getch()
+    def select_next_file(self) -> bool:
+        if self.selected_file_idx == len(self.filelist) - 1:
+            return False
+        self._select_file(self.selected_file_idx + 1)
+        return True
+
+    def select_prev_file(self) -> bool:
+        if self.selected_file_idx == 0:
+            return False
+        self._select_file(self.selected_file_idx - 1)
+        return True
+
+    def _select_file(self, idx: int) -> None:
+        self.selected_file_idx = idx
+        self.selected_file = self.filelist[self.selected_file_idx][0]
+
+        self.diff_contents = gitdiff.get_file_diff(self.selected_file)
+        self.update_filelist()
+        self.update_diff()
 
     def update_filelist(self) -> None:
         self.pad_filelist.pad.erase()
@@ -96,19 +117,20 @@ class CursesUi:
             if total_length > max_x:
                 fname = '...' + fname[len(fname) - (max_x - total_length) - 3:]
 
-            def write(s, attr=None):
+            def write(s, attr=curses.A_NORMAL):
                 nonlocal length
-                self.pad_filelist.pad.addstr(
-                    idx, length,
-                    s,
-                    attr if attr is not None else curses.A_NORMAL
-                )
+
+                if idx == self.selected_file_idx:
+                    attr |= curses.A_REVERSE
+
+                self.pad_filelist.pad.addstr(idx, length, s, attr)
                 length += len(s)
 
             write(str(added), curses.color_pair(CursesUi.COLOR_ADD))
             write(' ')
             write(str(removed), curses.color_pair(CursesUi.COLOR_REMOVE))
             write(' ' + fname)
+            write(' ' * (max_x - length))
             idx += 1
 
         self.pad_filelist.refresh(0, 0)
@@ -127,7 +149,7 @@ class CursesUi:
                 idx += 1
                 continue
 
-            attr = None
+            attr = curses.A_NORMAL
             if line[0] == '+':
                 attr = curses.color_pair(CursesUi.COLOR_ADD)
             elif line[0] == '-':
@@ -135,10 +157,13 @@ class CursesUi:
             elif line[0] == '@':
                 attr = curses.color_pair(CursesUi.COLOR_SECTION)
 
-            self.pad_diff.pad.addstr(idx, 0, line, attr if attr is not None else curses.A_NORMAL)
+            self.pad_diff.pad.addstr(idx, 0, line, attr)
             idx += 1
 
         self.pad_diff.refresh(0, 0)
+
+    def input(self) -> int:
+        return self.stdscr.getch()
 
 def curses_initialize(cui: CursesUi) -> None:
     curses.wrapper(cui.run)
