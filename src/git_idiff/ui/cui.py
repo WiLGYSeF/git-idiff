@@ -6,7 +6,10 @@ from gitdiff import GitDiff, GitFile
 from ui.colors import init_colors
 from ui.diff import DiffPad
 from ui.filelist import FileList
+from ui.messagebox import MessageBox
 from ui.statusbar import StatusBar
+
+WAIT_GET_FILES = 0.15
 
 class CursesUi:
     FILELIST_SCROLL_OFFSET = 1
@@ -33,7 +36,7 @@ class CursesUi:
         self.selected_file: typing.Optional[str] = None
         self.selected_file_idx: int = -1
 
-    async def run(self, stdscr) -> None:
+    async def run(self, stdscr: curses.window) -> None:
         self.stdscr = stdscr
 
         curses.curs_set(False)
@@ -109,20 +112,30 @@ class CursesUi:
 
     async def get_files_async(self) -> None:
         self.filelist = []
+        loadchars = r'/-\|'
         counter = 0
 
         task = asyncio.create_task(self.gitdiff.get_filenames_async())
 
         while True:
             try:
-                filelist = await asyncio.wait_for(asyncio.shield(task), timeout=0.25)
+                filelist = await asyncio.wait_for(asyncio.shield(task), timeout=WAIT_GET_FILES)
                 break
             except asyncio.TimeoutError:
                 pass
 
             self.stdscr.erase()
-            self.stdscr.addstr(0, 0, f'{counter}')
+
+            MessageBox.draw(self.stdscr, [
+                '',
+                f'   Loading... {loadchars[counter]}   ',
+                ''
+            ])
+
             counter += 1
+            if counter == len(loadchars):
+                counter = 0
+
             self.stdscr.refresh()
 
         self.filelist = filelist
@@ -230,5 +243,5 @@ class CursesUi:
 def curses_initialize(cui: CursesUi) -> None:
     curses.wrapper(lambda stdscr: _main(cui, stdscr))
 
-def _main(cui, stdscr) -> None:
+def _main(cui: CursesUi, stdscr: curses.window) -> None:
     asyncio.run(cui.run(stdscr))

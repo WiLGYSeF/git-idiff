@@ -48,10 +48,8 @@ class FileList(CursesPad):
                 if idx == selected_file_idx:
                     attr |= curses.A_REVERSE
 
-                if length + len(val) >= max_x:
-                    val = val[len(val) - (max_x - length):]
                 if len(val) > 0:
-                    self.pad.addstr(idx, length, val, attr)
+                    self.pad.addnstr(idx, length, val, max_x - length, attr)
                     length += len(val)
 
             write(insertions, curses.color_pair(COLOR_ADD))
