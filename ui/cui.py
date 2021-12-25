@@ -83,6 +83,14 @@ class CursesUi:
                 self.pad_diff.scroll(0, -1)
             elif c == curses.KEY_RIGHT:
                 self.pad_diff.scroll(0, 1)
+            elif c == curses.KEY_PPAGE:
+                self.pad_diff.scroll(-self.pad_diff.height, 0)
+            elif c == curses.KEY_NPAGE:
+                self.pad_diff.scroll(self.pad_diff.height, 0)
+            elif c == curses.KEY_HOME:
+                self.pad_diff.refresh(self.pad_diff.y, 0)
+            elif c == curses.KEY_END:
+                self.pad_diff.refresh(self.pad_diff.y, self.pad_diff.pad.getmaxyx()[1])
             elif c == curses.KEY_MOUSE:
                 _, x, y, _, state = curses.getmouse()
                 if self.pad_filelist.pad.enclose(y, x):
