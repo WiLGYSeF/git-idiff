@@ -33,4 +33,8 @@ class FileListTest(unittest.TestCase):
         ]
 
         for entry in ENTRIES:
-            self.assertTupleEqual(entry[EXPECTED], _gitfile_to_entry(entry[GITFILE], entry[MAX_X]))
+            with self.subTest(gitfile=entry[GITFILE], max_x=entry[MAX_X]):
+                self.assertTupleEqual(
+                    entry[EXPECTED],
+                    _gitfile_to_entry(entry[GITFILE], entry[MAX_X])
+                )

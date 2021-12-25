@@ -21,7 +21,8 @@ class GitDiffTest(unittest.TestCase):
 
         for entry in ENTRIES:
             gitdiff = GitDiff(entry[ARGS])
-            self.assertListEqual(entry[EXPECTED], gitdiff.args)
+            with self.subTest(args=entry[ARGS]):
+                self.assertListEqual(entry[EXPECTED], gitdiff.args)
 
     def test_sanitize_args_whitelist_single(self):
         ENTRIES = [
@@ -45,7 +46,8 @@ class GitDiffTest(unittest.TestCase):
 
         for entry in ENTRIES:
             gitdiff = GitDiff(entry[ARGS])
-            self.assertListEqual(entry[EXPECTED], gitdiff.args)
+            with self.subTest(args=entry[ARGS]):
+                self.assertListEqual(entry[EXPECTED], gitdiff.args)
 
     def test_sanitize_args_whitelist_single_param(self):
         ENTRIES = [
@@ -61,7 +63,8 @@ class GitDiffTest(unittest.TestCase):
 
         for entry in ENTRIES:
             gitdiff = GitDiff(entry[ARGS])
-            self.assertListEqual(entry[EXPECTED], gitdiff.args)
+            with self.subTest(args=entry[ARGS]):
+                self.assertListEqual(entry[EXPECTED], gitdiff.args)
 
     def test_sanitize_args_whitelist(self):
         ENTRIES = [
@@ -73,7 +76,8 @@ class GitDiffTest(unittest.TestCase):
 
         for entry in ENTRIES:
             gitdiff = GitDiff(entry[ARGS])
-            self.assertListEqual(entry[EXPECTED], gitdiff.args)
+            with self.subTest(args=entry[ARGS]):
+                self.assertListEqual(entry[EXPECTED], gitdiff.args)
 
     def test_sanitize_args_line_prefix(self):
         ENTRIES = [
@@ -97,8 +101,9 @@ class GitDiffTest(unittest.TestCase):
 
         for entry in ENTRIES:
             gitdiff = GitDiff(entry[ARGS])
-            self.assertEqual(entry[EXPECTED], gitdiff.line_prefix_str)
-            self.assertEqual(len(entry[EXPECTED]) != 0, gitdiff.has_prefix())
+            with self.subTest(args=entry[ARGS]):
+                self.assertEqual(entry[EXPECTED], gitdiff.line_prefix_str)
+                self.assertEqual(len(entry[EXPECTED]) != 0, gitdiff.has_prefix())
 
     def test_noprefix(self):
         ENTRIES = [
@@ -121,4 +126,5 @@ class GitDiffTest(unittest.TestCase):
 
         for entry in ENTRIES:
             gitdiff = GitDiff(entry[ARGS])
-            self.assertEqual(entry[EXPECTED], gitdiff.noprefix(entry[VALUE]))
+            with self.subTest(args=entry[ARGS]):
+                self.assertEqual(entry[EXPECTED], gitdiff.noprefix(entry[VALUE]))
