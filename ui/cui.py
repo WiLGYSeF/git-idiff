@@ -130,11 +130,17 @@ class CursesUi:
 
         idx = 0
         for fname, added, removed in self.filelist:
-            total_length = len(f'{added} {removed} {fname}')
+            added_str = str(added) if added is not None else '-'
+            removed_str = str(removed) if removed is not None else '-'
+
+            total_length = len(f'{added_str} {removed_str} {fname}')
             length = 0
 
             if total_length > max_x:
-                fname = '...' + fname[len(fname) - (max_x - total_length) - 3:]
+                fname = '##' + fname[
+                    max(len(fname) - (max_x - len(f'{added_str} {removed_str} ##')), 0)
+                    :
+                ]
 
             def write(val, attr=curses.A_NORMAL):
                 nonlocal length
@@ -142,13 +148,17 @@ class CursesUi:
                 if idx == self.selected_file_idx:
                     attr |= curses.A_REVERSE
 
-                self.pad_filelist.pad.addstr(idx, length, val, attr)
-                length += len(val)
+                if len(val) > 0:
+                    if length + len(val) >= max_x:
+                        val = val[len(val) - (max_x - length):]
+                    self.pad_filelist.pad.addstr(idx, length, val, attr)
+                    length += len(val)
 
-            write(str(added), curses.color_pair(CursesUi.COLOR_ADD))
+            write(added_str, curses.color_pair(CursesUi.COLOR_ADD))
             write(' ')
-            write(str(removed), curses.color_pair(CursesUi.COLOR_REMOVE))
-            write(' ' + fname)
+            write(removed_str, curses.color_pair(CursesUi.COLOR_REMOVE))
+            write(' ')
+            write(fname)
             write(' ' * (max_x - length))
             idx += 1
 
