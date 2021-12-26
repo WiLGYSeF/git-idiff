@@ -121,20 +121,26 @@ class GitDiff:
                 break
 
             insertions, deletions, fname = parts
-            oldfname = None
+            old_fname = None
 
-            if len(fname) == 0:
-                oldfname = self.noprefix(output_split[idx]).decode('utf-8')
-                idx += 1
-                fname = self.noprefix(output_split[idx])
-                idx += 1
+            try:
+                if len(fname) == 0:
+                    old_fname = self.noprefix(output_split[idx]).decode('utf-8')
+                    idx += 1
+                    fname = self.noprefix(output_split[idx])
+                    idx += 1
 
-            results.append(GitFile(
-                fname.decode('utf-8'),
-                oldfname,
-                int(insertions) if insertions != b'-' else None,
-                int(deletions) if deletions != b'-' else None
-            ))
+                    if len(fname) == 0 or len(old_fname) == 0:
+                        raise ValueError('missing filename')
+
+                results.append(GitFile(
+                    fname.decode('utf-8'),
+                    old_fname,
+                    int(insertions) if insertions != b'-' else None,
+                    int(deletions) if deletions != b'-' else None
+                ))
+            except (IndexError, ValueError) as err:
+                raise ValueError('received incorrect output from git diff') from err
 
         # git diff did not return a patch
         if idx == len(output_split):
@@ -143,9 +149,20 @@ class GitDiff:
         result_idx = 0
         for filediff in self._get_file_diffs(output_split[idx].decode('utf-8')):
             headers, content = filediff
+
+            if result_idx == len(results):
+                raise ValueError(
+                    f'too many diff patches were given for all of the changes, only expected {len(results)}'
+                )
+
             results[result_idx].headers = headers
             results[result_idx].content = content
             result_idx += 1
+
+        if result_idx != len(results):
+            raise ValueError(
+                f'not enough diff patches were given for all of the changes, expected {len(results)}, but got {result_idx}'
+            )
 
         return results
 
@@ -187,25 +204,31 @@ class GitDiff:
             filemap[file.filename] = file
 
         while idx < len(output_split) and len(output_split[idx]) > 0:
-            status = output_split[idx].decode('utf-8')
-            idx += 1
-            fname = output_split[idx].decode('utf-8')
-            idx += 1
-
-            old_fname = None
-
-            if fname not in filemap:
-                old_fname = fname
+            try:
+                status = output_split[idx].decode('utf-8')
+                idx += 1
                 fname = output_split[idx].decode('utf-8')
                 idx += 1
 
-            file = filemap[fname]
-            file.set_status(status)
+                old_fname = None
 
-            if old_fname != file.old_filename:
-                raise ValueError(
-                    f'expected an old filename of {file.old_filename}, but got {old_fname}'
-                )
+                if fname not in filemap:
+                    old_fname = fname
+                    fname = output_split[idx].decode('utf-8')
+                    idx += 1
+
+                    if fname not in filemap:
+                        raise ValueError(f'filename is not in results: {fname}')
+
+                file = filemap[fname]
+                file.set_status(status)
+
+                if old_fname != file.old_filename:
+                    raise ValueError(
+                        f'expected a src filename of {file.old_filename}, but got {old_fname}'
+                    )
+            except (IndexError, ValueError) as err:
+                raise ValueError('received incorrect output from git diff') from err
 
     def _sanitize_args(self, args: typing.Iterable[str]) -> typing.List[str]:
         result = []
