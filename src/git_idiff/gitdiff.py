@@ -80,6 +80,7 @@ class GitDiff:
     ]
     WHITELIST_ARGS_SINGLE = 'DRabwW1230'
     WHITELIST_ARGS_SINGLE_PARAM = 'UBMClSGOI'
+    BLACKLIST_ARGS_SINGLE_PARAM = 'X'
 
     HEADERS_REGEX = re.compile(
         r'^(diff|(old|new) mode|(new|deleted) file|copy|rename|((dis)?similarity )?index|---|\+\+\+) '
@@ -92,8 +93,10 @@ class GitDiff:
         self.src_prefix: str = 'a/'
         self.dst_prefix: str = 'b/'
         self.line_prefix: str = ''
+        self._removed_args: typing.List[str] = []
 
         self.args = self._sanitize_args(args) if args is not None else []
+
 
     async def get_diff_async(self) -> typing.List[GitFile]:
         proc = await asyncio.create_subprocess_exec(*[
@@ -239,6 +242,7 @@ class GitDiff:
                 raise ValueError('received incorrect output from git diff') from err
 
     def _sanitize_args(self, args: typing.Iterable[str]) -> typing.List[str]:
+        self._removed_args = []
         result = []
 
         for arg in args:
@@ -250,13 +254,19 @@ class GitDiff:
                         idx = 1
                         while idx < len(arg) and not arg[idx] in GitDiff.WHITELIST_ARGS_SINGLE_PARAM:
                             if arg[idx] not in GitDiff.WHITELIST_ARGS_SINGLE:
-                                arg = arg[:idx] + arg[idx + 1:]
+                                if arg[idx] in GitDiff.BLACKLIST_ARGS_SINGLE_PARAM:
+                                    self._removed_args.append('-' + arg[idx:])
+                                    arg = arg[:idx]
+                                else:
+                                    self._removed_args.append('-' + arg[idx])
+                                    arg = arg[:idx] + arg[idx + 1:]
                             else:
                                 idx += 1
                         if len(arg) == 1:
                             continue
                     else:
                         if not any(arg.startswith(warg) for warg in GitDiff.WHITELIST_ARGS):
+                            self._removed_args.append(arg)
                             continue
                         if arg.startswith('--src-prefix='):
                             self.src_prefix = arg[len('--src-prefix='):]

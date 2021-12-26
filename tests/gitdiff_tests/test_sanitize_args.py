@@ -5,6 +5,7 @@ from src.git_idiff.gitdiff import GitDiff
 ARGS = 'args'
 EXPECTED = 'expected'
 VALUE = 'value'
+REMOVED = 'removed'
 
 class SanitizeArgsTest(unittest.TestCase):
     def test_sanitize_args(self):
@@ -28,20 +29,24 @@ class SanitizeArgsTest(unittest.TestCase):
     def test_sanitize_args_whitelist_single(self):
         entries = [
             {
-                ARGS: ['this', '-X', 'is', '-XX', 'a'],
-                EXPECTED: ['this', 'is', 'a']
+                ARGS: ['this', '-Q', 'is', '-QQ', 'a'],
+                EXPECTED: ['this', 'is', 'a'],
+                REMOVED: ['-Q', '-Q', '-Q']
             },
             {
-                ARGS: ['-RXw'],
-                EXPECTED: ['-Rw']
+                ARGS: ['-RQw'],
+                EXPECTED: ['-Rw'],
+                REMOVED: ['-Q']
             },
             {
-                ARGS: ['-Xw'],
-                EXPECTED: ['-w']
+                ARGS: ['-Qw'],
+                EXPECTED: ['-w'],
+                REMOVED: ['-Q']
             },
             {
-                ARGS: ['-RX'],
-                EXPECTED: ['-R']
+                ARGS: ['-RQ'],
+                EXPECTED: ['-R'],
+                REMOVED: ['-Q']
             }
         ]
 
@@ -50,16 +55,24 @@ class SanitizeArgsTest(unittest.TestCase):
             with self.subTest(args=args):
                 gitdiff = GitDiff(args)
                 self.assertListEqual(entry[EXPECTED], gitdiff.args)
+                self.assertListEqual(entry[REMOVED], gitdiff._removed_args)
 
     def test_sanitize_args_whitelist_single_param(self):
         entries = [
             {
-                ARGS: ['-XM5X'],
-                EXPECTED: ['-M5X']
+                ARGS: ['-QM5X'],
+                EXPECTED: ['-M5X'],
+                REMOVED: ['-Q']
             },
             {
-                ARGS: ['-RXwM'],
-                EXPECTED: ['-RwM']
+                ARGS: ['-RQwM'],
+                EXPECTED: ['-RwM'],
+                REMOVED: ['-Q']
+            },
+            {
+                ARGS: ['-RXw'],
+                EXPECTED: ['-R'],
+                REMOVED: ['-Xw']
             }
         ]
 
@@ -68,12 +81,14 @@ class SanitizeArgsTest(unittest.TestCase):
             with self.subTest(args=args):
                 gitdiff = GitDiff(args)
                 self.assertListEqual(entry[EXPECTED], gitdiff.args)
+                self.assertListEqual(entry[REMOVED], gitdiff._removed_args)
 
     def test_sanitize_args_whitelist(self):
         entries = [
             {
-                ARGS: ['--not-whitelisted', '--cached', '--text', '--not-whitelisted'],
-                EXPECTED: ['--cached', '--text']
+                ARGS: ['--not-whitelisted', '--cached', '--text', '--not-wl'],
+                EXPECTED: ['--cached', '--text'],
+                REMOVED: ['--not-whitelisted', '--not-wl']
             }
         ]
 
@@ -82,6 +97,7 @@ class SanitizeArgsTest(unittest.TestCase):
             with self.subTest(args=args):
                 gitdiff = GitDiff(args)
                 self.assertListEqual(entry[EXPECTED], gitdiff.args)
+                self.assertListEqual(entry[REMOVED], gitdiff._removed_args)
 
     def test_sanitize_args_line_prefix(self):
         entries = [
@@ -105,10 +121,12 @@ class SanitizeArgsTest(unittest.TestCase):
 
         for entry in entries:
             args = entry[ARGS]
+            expected = entry[EXPECTED]
+
             with self.subTest(args=args):
                 gitdiff = GitDiff(args)
-                self.assertEqual(entry[EXPECTED], gitdiff.line_prefix)
-                self.assertEqual(len(entry[EXPECTED]) != 0, gitdiff.has_prefix())
+                self.assertEqual(expected, gitdiff.line_prefix)
+                self.assertEqual(len(expected) != 0, gitdiff.has_prefix())
 
     def test_sanitize_args_src_dst_prefix(self):
         entries = [
