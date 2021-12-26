@@ -49,21 +49,24 @@ class FileList(CursesPad):
 
         idx = 0
         for file in filelist:
-            insertions, deletions, fname = _gitfile_to_entry(file, max_x)
-            leftpad = " " * (max_x - len(insertions) - len(deletions) - len(fname) - 1)
             attr = curses.A_REVERSE if idx == selected_file_idx else curses.A_NORMAL
-
-            addnstrattrfmt(self.pad, idx, 0, StrAttrFormat(
-                f'{{insertions}} {{deletions}}{leftpad}{fname}',
-                {
-                    'insertions': (insertions, curses.color_pair(ui.colors.COLOR_ADD) | attr),
-                    'deletions': (deletions, curses.color_pair(ui.colors.COLOR_REMOVE) | attr),
-                },
-                attr
-            ), max_x)
+            addnstrattrfmt(self.pad, idx, 0, _gitfile_to_saf(file, attr, max_x), max_x)
             idx += 1
 
         self.refresh(self.y, 0)
+
+def _gitfile_to_saf(file: GitFile, attr: int, max_x: int) -> StrAttrFormat:
+    insertions, deletions, fname = _gitfile_to_entry(file, max_x)
+    leftpad = ' ' * (max_x - len(insertions) - len(deletions) - len(fname) - 1)
+
+    return StrAttrFormat(
+        f'{{insertions}} {{deletions}}{leftpad}{fname}',
+        {
+            'insertions': (insertions, curses.color_pair(ui.colors.COLOR_ADD) | attr),
+            'deletions': (deletions, curses.color_pair(ui.colors.COLOR_REMOVE) | attr),
+        },
+        attr
+    )
 
 def _gitfile_to_entry(file: GitFile, max_x: int) -> typing.Tuple[str, str, str]:
     added_str = str(file.insertions) if file.insertions is not None else '-'
