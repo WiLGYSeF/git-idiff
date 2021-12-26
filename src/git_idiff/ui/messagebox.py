@@ -7,6 +7,8 @@ class MessageBox:
     @staticmethod
     def draw(win: curses.window, message: typing.List[str], **kwargs) -> None:
         title: str = kwargs.get('title', '')
+        offset_y: int = kwargs.get('offset_y', -1)
+        offset_x: int = kwargs.get('offset_x', -1)
         ls: int = kwargs.get('ls', curses.ACS_VLINE)
         rs: int = kwargs.get('rs', curses.ACS_VLINE)
         ts: int = kwargs.get('ts', curses.ACS_HLINE)
@@ -27,7 +29,10 @@ class MessageBox:
                 f'message exceeds available window space {box_lines}, {box_columns} > {lines}, {columns}'
             )
 
-        topleft = Vector((lines - box_lines) // 2, (columns - box_columns) // 2)
+        topleft = Vector(
+            (lines - box_lines) // 2 if offset_y < 0 else offset_y,
+            (columns - box_columns) // 2 if offset_x < 0 else offset_x
+        )
         topright = topleft + Vector(0, box_columns - 1)
         botleft = topleft + Vector(box_lines - 1, 0)
         botright = botleft + Vector(0, box_columns - 1)
