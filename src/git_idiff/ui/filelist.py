@@ -7,12 +7,12 @@ from ui.pad import CursesPad
 from ui.utils import StrAttrFormat, addnstrattrfmt
 
 class FileList(CursesPad):
-    def __init__(self, window: curses.window, column_width: int):
+    def __init__(self, win: curses.window, column_width: int):
         self._column_width: int = column_width
 
-        lines, _ = window.getmaxyx()
+        lines, _ = win.getmaxyx()
 
-        super().__init__(window,
+        super().__init__(win,
             height = lines - 1,
             width = self._column_width,
             offset_y = 0,

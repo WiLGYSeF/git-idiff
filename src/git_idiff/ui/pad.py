@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 import curses
 
 class CursesPad(ABC):
-    def __init__(self, window: curses.window, **kwargs):
-        self.window: curses.window = window
+    def __init__(self, win: curses.window, **kwargs):
+        self.window: curses.window = win
         self._height: int = kwargs['height']
         self._width: int = kwargs['width']
         self._offset_y: int = kwargs['offset_y']

@@ -6,10 +6,10 @@ from ui.pad import CursesPad
 from ui.utils import StrAttrFormat, addnstrattrfmt
 
 class StatusBar(CursesPad):
-    def __init__(self, window: curses.window):
-        lines, columns = window.getmaxyx()
+    def __init__(self, win: curses.window):
+        lines, columns = win.getmaxyx()
 
-        super().__init__(window,
+        super().__init__(win,
             height = 2,
             width = columns,
             offset_y = lines - 1,
