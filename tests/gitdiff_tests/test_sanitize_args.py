@@ -16,7 +16,7 @@ class SanitizeArgsTest(unittest.TestCase):
             },
             {
                 ARGS: ['this', '-', 'is', '--', 'a', 'test'],
-                EXPECTED: ['this', '-', 'is']
+                EXPECTED: ['this', '-', 'is', '--']
             }
         ]
 

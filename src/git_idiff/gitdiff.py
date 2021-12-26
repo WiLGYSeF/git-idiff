@@ -244,6 +244,7 @@ class GitDiff:
 
         for arg in args:
             if arg == '--':
+                result.append(arg)
                 break
             if arg[0] == '-':
                 if len(arg) > 1:
