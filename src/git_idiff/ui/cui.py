@@ -51,12 +51,20 @@ class CursesUi:
         removed_args = self.gitdiff.removed_args
         if len(removed_args) > 0:
             try:
-                MessageBox.draw(stdscr, MessageBox.box_msg([
-                    'You supplied unsupported arguments, they will be ignored: ',
-                    ', '.join(removed_args),
-                    '',
-                    'Press any key to continue.'
-                ], min(70, columns - 4)), title='Unsupported arguments')
+                MessageBox.draw(
+                    stdscr,
+                    MessageBox.box_msg(
+                        [
+                            'You supplied unsupported arguments, they will be ignored: ',
+                            ', '.join(removed_args),
+                            '',
+                            'Press any key to continue.'
+                        ],
+                        min(70, columns - 4)
+                    ),
+                    title='Unsupported arguments',
+                    hspacing=1
+                )
                 self.stdscr.getch()
             except ValueError:
                 pass

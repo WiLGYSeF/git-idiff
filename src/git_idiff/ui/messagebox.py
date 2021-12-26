@@ -9,6 +9,8 @@ class MessageBox:
         title: str = kwargs.get('title', '')
         offset_y: int = kwargs.get('offset_y', -1)
         offset_x: int = kwargs.get('offset_x', -1)
+        hspacing: int = max(kwargs.get('hspacing', 0), 0)
+        vspacing: int = max(kwargs.get('vspacing', 0), 0)
         ls: int = kwargs.get('ls', curses.ACS_VLINE)
         rs: int = kwargs.get('rs', curses.ACS_VLINE)
         ts: int = kwargs.get('ts', curses.ACS_HLINE)
@@ -21,8 +23,8 @@ class MessageBox:
         lines, columns = win.getmaxyx()
         data_lines = len(message)
         data_columns = max( len(line) for line in message )
-        box_lines = data_lines + 2
-        box_columns = data_columns + 2
+        box_lines = data_lines + vspacing * 2 + 2
+        box_columns = data_columns + hspacing * 2 + 2
 
         if box_lines > lines or box_columns > columns:
             raise ValueError(
@@ -66,7 +68,7 @@ class MessageBox:
         while cur.x < botright.x - 1:
             _addch(win, cur.add(0, 1), bs)
 
-        cur = topleft + Vector(0, 1)
+        cur = topleft + Vector(vspacing, 1 + hspacing)
         for line in message:
             _addnstr(win, cur.add(1, 0), line, width)
 
