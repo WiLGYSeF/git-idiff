@@ -67,9 +67,9 @@ class CursesUi:
                 ch = chr(c)
                 if ch == 'f':
                     self.toggle_filelist()
-                elif ch == 'n':
+                elif ch in ('n', 'B'): # ctrl + KEY_DOWN
                     self.select_next_file()
-                elif ch == 'p':
+                elif ch in ('p', 'A'): # ctrl + KEY_UP
                     self.select_prev_file()
                 elif ch == 'q':
                     break
@@ -157,17 +157,14 @@ class CursesUi:
                 pass
 
             self.stdscr.erase()
-
             MessageBox.draw(self.stdscr, [
                 '',
                 f'   Loading... {loadchars[counter]}   ',
                 ''
             ])
-
             counter += 1
             if counter == len(loadchars):
                 counter = 0
-
             self.stdscr.refresh()
 
         self.stdscr.erase()
