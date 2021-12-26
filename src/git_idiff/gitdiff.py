@@ -79,7 +79,7 @@ class GitDiff:
     def __init__(self, args: typing.Optional[typing.Iterable[str]] = None):
         self.src_prefix: str = 'a/'
         self.dst_prefix: str = 'b/'
-        self.line_prefix_str: str = ''
+        self.line_prefix: str = ''
 
         self.args = self._sanitize_args(args) if args is not None else []
 
@@ -186,13 +186,13 @@ class GitDiff:
                         if arg.startswith('--dst-prefix='):
                             self.dst_prefix = arg[len('--dst-prefix='):]
                         if arg.startswith('--line-prefix='):
-                            self.line_prefix_str = arg[len('--line-prefix='):]
+                            self.line_prefix = arg[len('--line-prefix='):]
             result.append(arg)
 
         return result
 
     def has_prefix(self) -> bool:
-        return len(self.line_prefix_str) != 0
+        return len(self.line_prefix) != 0
 
     def noprefix(self, val: typing.AnyStr) -> typing.AnyStr:
-        return val[len(self.line_prefix_str):] if len(self.line_prefix_str) != 0 else val
+        return val[len(self.line_prefix):] if len(self.line_prefix) != 0 else val

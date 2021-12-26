@@ -102,7 +102,7 @@ class GitDiffTest(unittest.TestCase):
         for entry in entries:
             gitdiff = GitDiff(entry[ARGS])
             with self.subTest(args=entry[ARGS]):
-                self.assertEqual(entry[EXPECTED], gitdiff.line_prefix_str)
+                self.assertEqual(entry[EXPECTED], gitdiff.line_prefix)
                 self.assertEqual(len(entry[EXPECTED]) != 0, gitdiff.has_prefix())
 
     def test_noprefix(self):
