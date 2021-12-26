@@ -1,7 +1,9 @@
 import curses
 
+import ui.colors
 from ui.diff import DiffPad
 from ui.pad import CursesPad
+from ui.utils import StrAttrFormat, addnstrattrfmt
 
 class StatusBar(CursesPad):
     def __init__(self, window: curses.window):
@@ -30,22 +32,36 @@ class StatusBar(CursesPad):
         diff_linenum = min(diff_lines, pad_diff.height + pad_diff.y)
         diff_colnum = min(diff_longest_line, pad_diff.width + pad_diff.x)
 
-        leftstr = f' {selected_file_idx + 1} / {filelist_len} files  +{total_insertions}  -{total_deletions}'
+        leftstr = StrAttrFormat(
+            f' {selected_file_idx + 1} / {filelist_len} files  {{insertions}}  {{deletions}}',
+            {
+                'insertions': (
+                    f'+{total_insertions}',
+                    curses.color_pair(ui.colors.COLOR_ADD) | curses.A_REVERSE
+                ),
+                'deletions': (
+                    f'-{total_deletions}',
+                    curses.color_pair(ui.colors.COLOR_REMOVE) | curses.A_REVERSE
+                ),
+            },
+            curses.A_REVERSE
+        )
         centerstr = ' '
         rightstr = f'({diff_linenum}, {diff_colnum}) / ({diff_lines}, {diff_longest_line}) '
 
+        width = min(self._width, max_x)
         leftcenter_pad = ' ' * (
-            (self._width - (len(leftstr) + len(centerstr) + len(rightstr))) // 2
+            (width - (len(leftstr) + len(centerstr) + len(rightstr))) // 2
         )
         centerright_pad = ' ' * (
-            self._width - (len(leftstr) + len(centerstr) + len(rightstr) + len(leftcenter_pad))
+            width - (len(leftstr) + len(centerstr) + len(rightstr) + len(leftcenter_pad))
         )
 
-        self.pad.addnstr(
+        addnstrattrfmt(
+            self.pad,
             0, 0,
-            (leftstr + leftcenter_pad + centerstr + centerright_pad + rightstr),
-            min(self._width, max_x),
-            curses.A_REVERSE
+            leftstr + leftcenter_pad + centerstr + centerright_pad + rightstr,
+            width
         )
 
         self.refresh(0, 0)

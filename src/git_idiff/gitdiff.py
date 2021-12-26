@@ -3,11 +3,35 @@ import re
 import subprocess
 import typing
 
-class GitFile(typing.NamedTuple):
-    filename: str
-    old_filename: typing.Optional[str]
-    insertions: typing.Optional[int]
-    deletions: typing.Optional[int]
+class GitFile:
+    ADDED = 'A'
+    COPIED = 'C'
+    DELETED = 'D'
+    MODIFIED = 'M'
+    RENAMED = 'R'
+    TYPE_CHANGED = 'T'
+    UNMERGED = 'U'
+    UNKNOWN = 'X'
+    BROKEN = 'B'
+
+    def __init__(self,
+        filename: str,
+        old_filename: typing.Optional[str] = None,
+        insertions: typing.Optional[int] = None,
+        deletions: typing.Optional[int] = None,
+        headers: typing.Optional[typing.List[str]] = None,
+        content: typing.Optional[typing.List[str]] = None,
+        status: typing.Optional[str] = None
+    ):
+        self.filename: str = filename
+        self.old_filename: typing.Optional[str] = old_filename
+        self.insertions: typing.Optional[int] = insertions
+        self.deletions: typing.Optional[int] = deletions
+        self.headers: typing.List[str] = headers if headers is not None else []
+        self.content: typing.List[str] = content if content is not None else []
+        self.status: str = status if status is not None else GitFile.UNKNOWN
+
+_FileDiff = typing.Tuple[typing.List[str], typing.List[str]]
 
 class GitDiff:
     WHITELIST_ARGS = [
@@ -45,25 +69,34 @@ class GitDiff:
     WHITELIST_ARGS_SINGLE = 'DRabwW1230'
     WHITELIST_ARGS_SINGLE_PARAM = 'UBMClSGOI'
 
-    def __init__(self, args: typing.Optional[typing.List[str]] = None):
+    HEADERS_REGEX = re.compile(
+        r'^(diff|(old|new) mode|(new|deleted) file|copy|rename|((dis)?similarity )?index|---|\+\+\+) '
+    )
+    DIFFSTART_REGEX = re.compile(
+        r'^diff --git '
+    )
+
+    def __init__(self, args: typing.Optional[typing.Iterable[str]] = None):
+        self.src_prefix: str = 'a/'
+        self.dst_prefix: str = 'b/'
         self.line_prefix_str: str = ''
 
         self.args = self._sanitize_args(args) if args is not None else []
 
-    async def get_filenames_async(self) -> typing.List[GitFile]:
+    async def get_diff_async(self) -> typing.List[GitFile]:
         proc = await asyncio.create_subprocess_exec(*[
-            'git', 'diff', '--numstat', '-z', *self.args
+            'git', 'diff', '--numstat', '-z', '-p', *self.args
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, _ = await proc.communicate()
 
-        return self._get_filenames(output)
+        return self._get_diff(output)
 
-    def get_filenames(self) -> typing.List[GitFile]:
-        return self._get_filenames(subprocess.check_output([
-            'git', 'diff', '--numstat', '-z', *self.args
+    def get_diff(self) -> typing.List[GitFile]:
+        return self._get_diff(subprocess.check_output([
+            'git', 'diff', '--numstat', '-z', '-p', *self.args
         ]))
 
-    def _get_filenames(self, output: bytes) -> typing.List[GitFile]:
+    def _get_diff(self, output: bytes) -> typing.List[GitFile]:
         output_split = output.split(b'\0')
         idx = 0
 
@@ -72,8 +105,8 @@ class GitDiff:
         while idx < len(output_split):
             parts = self.noprefix(output_split[idx]).split(b'\t')
             idx += 1
-            if len(parts) != 3:
-                continue
+            if len(parts) == 1:
+                break
 
             insertions, deletions, fname = parts
             oldfname = None
@@ -91,27 +124,44 @@ class GitDiff:
                 int(deletions) if deletions != b'-' else None
             ))
 
+        # git diff did not return a patch
+        if idx == len(output_split):
+            return results
+
+        result_idx = 0
+        for filediff in self._get_file_diffs(output_split[idx].decode('utf-8')):
+            headers, content = filediff
+            results[result_idx].headers = headers
+            results[result_idx].content = content
+            result_idx += 1
+
         return results
 
-    def get_file_diff(self,fname: str) -> typing.Tuple[typing.List[str], typing.List[str]]:
-        output = subprocess.check_output([
-            'git', 'diff', *self.args, '--', fname
-        ])
-        lines = output.decode('utf-8').split('\n')
+    def _get_file_diffs(self, data: str) -> typing.Generator[_FileDiff, None, None]:
+        lines = data.split('\n')
+        start = 0
+        idx = 0
 
-        headers_regex = re.compile(
-            r'^(diff|(old|new) mode|(new|deleted) file|copy|rename|((dis)?similarity )?index|---|\+\+\+) '
-        )
-        headers = []
+        while idx < len(lines):
+            if GitDiff.DIFFSTART_REGEX.search(lines[idx]) is not None:
+                if start != idx:
+                    yield self._get_file_diff(lines, start, idx)
+                    start = idx
+            idx += 1
 
-        while len(lines) > 0:
-            if headers_regex.search(self.noprefix(lines[0])) is None:
+        if start != idx:
+            yield self._get_file_diff(lines, start, idx)
+
+    def _get_file_diff(self, lines: typing.List[str], start: int, end: int) -> _FileDiff:
+        idx = start
+        while idx < end:
+            if GitDiff.HEADERS_REGEX.search(self.noprefix(lines[idx])) is None:
                 break
-            headers.append(lines.pop(0))
+            idx += 1
 
-        return headers, lines
+        return lines[start:idx], lines[idx:end]
 
-    def _sanitize_args(self, args: typing.List[str]) -> typing.List[str]:
+    def _sanitize_args(self, args: typing.Iterable[str]) -> typing.List[str]:
         result = []
 
         for arg in args:
@@ -131,6 +181,10 @@ class GitDiff:
                     else:
                         if not any(arg.startswith(warg) for warg in GitDiff.WHITELIST_ARGS):
                             continue
+                        if arg.startswith('--src-prefix='):
+                            self.src_prefix = arg[len('--src-prefix='):]
+                        if arg.startswith('--dst-prefix='):
+                            self.dst_prefix = arg[len('--dst-prefix='):]
                         if arg.startswith('--line-prefix='):
                             self.line_prefix_str = arg[len('--line-prefix='):]
             result.append(arg)

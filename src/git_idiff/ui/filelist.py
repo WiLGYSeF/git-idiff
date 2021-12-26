@@ -2,8 +2,9 @@ import curses
 import typing
 
 from gitdiff import GitFile
-from ui.colors import COLOR_ADD, COLOR_REMOVE
+import ui.colors
 from ui.pad import CursesPad
+from ui.utils import StrAttrFormat, addnstrattrfmt
 
 class FileList(CursesPad):
     def __init__(self, window: curses.window, column_width: int):
@@ -49,24 +50,17 @@ class FileList(CursesPad):
         idx = 0
         for file in filelist:
             insertions, deletions, fname = _gitfile_to_entry(file, max_x)
-            length = 0
+            leftpad = " " * (max_x - len(insertions) - len(deletions) - len(fname) - 1)
+            attr = curses.A_REVERSE if idx == selected_file_idx else curses.A_NORMAL
 
-            def write(val, attr=curses.A_NORMAL):
-                nonlocal length
-
-                if idx == selected_file_idx:
-                    attr |= curses.A_REVERSE
-
-                if len(val) > 0:
-                    self.pad.addnstr(idx, length, val, max_x - length, attr)
-                    length += len(val)
-
-            write(insertions, curses.color_pair(COLOR_ADD))
-            write(' ')
-            write(deletions, curses.color_pair(COLOR_REMOVE))
-            write(' ')
-            write(' ' * (max_x - length - len(fname)))
-            write(fname)
+            addnstrattrfmt(self.pad, idx, 0, StrAttrFormat(
+                f'{{insertions}} {{deletions}}{leftpad}{fname}',
+                {
+                    'insertions': (insertions, curses.color_pair(ui.colors.COLOR_ADD) | attr),
+                    'deletions': (deletions, curses.color_pair(ui.colors.COLOR_REMOVE) | attr),
+                },
+                attr
+            ), max_x)
             idx += 1
 
         self.refresh(self.y, 0)

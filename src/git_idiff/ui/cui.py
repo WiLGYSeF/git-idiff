@@ -20,7 +20,7 @@ class CursesUi:
 
     CURSES_BUTTON5_PRESSED = 0x00200000 # thanks python
 
-    def __init__(self, diff_args: typing.Optional[typing.List[str]] = None):
+    def __init__(self, diff_args: typing.Optional[typing.Iterable[str]] = None):
         self.gitdiff: GitDiff = GitDiff(diff_args)
 
         self.stdscr: curses.window = None
@@ -33,10 +33,7 @@ class CursesUi:
         self.total_insertions: int = 0
         self.total_deletions: int = 0
 
-        self.diff_headers: typing.List[str] = []
-        self.diff_contents: typing.List[str] = []
-
-        self.selected_file: typing.Optional[str] = None
+        self.selected_file: typing.Optional[GitFile] = None
         self.selected_file_idx: int = -1
         self.filelist_border_selected: bool = False
 
@@ -59,7 +56,7 @@ class CursesUi:
         stdscr.erase()
         stdscr.refresh()
 
-        await self.get_files_async()
+        await self.get_diff_async()
 
         if len(self.filelist) == 0:
             return
@@ -67,44 +64,44 @@ class CursesUi:
         self.select_file(0)
 
         while True:
-            c = self.stdscr.getch()
+            key = self.stdscr.getch()
 
             if self.help_menu_visible:
                 self.update_filelist()
                 self.update_diff()
                 self.help_menu_visible = False
 
-            if c < 256:
-                ch = chr(c)
-                if ch == 'f':
+            if key < 256:
+                keychr = chr(key)
+                if keychr == 'f':
                     self.toggle_filelist()
-                elif ch in ('n', 'B'): # ctrl + KEY_DOWN
+                elif keychr in ('n', 'B'): # ctrl + KEY_DOWN
                     self.select_next_file()
-                elif ch in ('p', 'A'): # ctrl + KEY_UP
+                elif keychr in ('p', 'A'): # ctrl + KEY_UP
                     self.select_prev_file()
-                elif ch == '?':
+                elif keychr == '?':
                     self.show_help_menu()
-                elif ch == 'q':
+                elif keychr == 'q':
                     break
-            elif c == curses.KEY_UP:
+            elif key == curses.KEY_UP:
                 self.pad_diff.scroll(-1, 0)
-            elif c == curses.KEY_DOWN:
+            elif key == curses.KEY_DOWN:
                 self.pad_diff.scroll(1, 0)
-            elif c == curses.KEY_LEFT:
+            elif key == curses.KEY_LEFT:
                 self.pad_diff.scroll(0, -self.pad_diff.width // 2)
-            elif c == curses.KEY_RIGHT:
+            elif key == curses.KEY_RIGHT:
                 self.pad_diff.scroll(0, self.pad_diff.width // 2)
-            elif c == curses.KEY_PPAGE:
+            elif key == curses.KEY_PPAGE:
                 self.pad_diff.scroll(-self.pad_diff.height, 0)
-            elif c == curses.KEY_NPAGE:
+            elif key == curses.KEY_NPAGE:
                 self.pad_diff.scroll(self.pad_diff.height, 0)
-            elif c == curses.KEY_HOME:
+            elif key == curses.KEY_HOME:
                 self.pad_diff.refresh(0, 0)
-            elif c == curses.KEY_END:
+            elif key == curses.KEY_END:
                 self.pad_diff.refresh(self.pad_diff.pad.getmaxyx()[0], 0)
-            elif c == curses.KEY_MOUSE:
+            elif key == curses.KEY_MOUSE:
                 self._handle_mouse_input()
-            elif c == curses.KEY_RESIZE:
+            elif key == curses.KEY_RESIZE:
                 lines, columns = self.stdscr.getmaxyx()
                 self.pad_filelist.height = lines - 1
                 self.pad_diff.height = lines - 1
@@ -155,12 +152,12 @@ class CursesUi:
                 else:
                     self.pad_diff.scroll(FILELIST_SCROLL_COUNT, 0)
 
-    async def get_files_async(self) -> None:
+    async def get_diff_async(self) -> None:
         self.filelist = []
         loadchars = r'/-\|'
         counter = 0
 
-        task = asyncio.create_task(self.gitdiff.get_filenames_async())
+        task = asyncio.create_task(self.gitdiff.get_diff_async())
 
         while True:
             try:
@@ -184,13 +181,16 @@ class CursesUi:
         self.stdscr.refresh()
 
         self.filelist = filelist
-        self._get_files()
+        self._get_diff_after()
 
-    def get_files(self) -> None:
-        self.filelist = self.gitdiff.get_filenames()
-        self._get_files()
+    def get_diff(self) -> None:
+        self.filelist = self.gitdiff.get_diff()
+        self._get_diff_after()
 
-    def _get_files(self) -> None:
+    def _get_diff_after(self) -> None:
+        if len(self.filelist) != 0:
+            self.selected_file = self.filelist[0]
+
         self.total_insertions = 0
         self.total_deletions = 0
 
@@ -225,19 +225,14 @@ class CursesUi:
         if idx < 0 or idx >= len(self.filelist):
             return
 
-        if idx != self.selected_file_idx:
-            self.selected_file_idx = idx
-            self.selected_file = self.filelist[self.selected_file_idx][0]
-            self.get_file_diff()
+        self.selected_file_idx = idx
+        self.selected_file = self.filelist[self.selected_file_idx]
 
         self.update_filelist()
         self.update_diff()
         self.update_statusbar()
 
         self.pad_diff.refresh(0, 0)
-
-    def get_file_diff(self) -> None:
-        self.diff_headers, self.diff_contents = self.gitdiff.get_file_diff(self.selected_file)
 
     def toggle_filelist(self) -> None:
         if self.pad_filelist.visible:
@@ -284,9 +279,16 @@ class CursesUi:
         self.pad_filelist.update(self.filelist, self.selected_file_idx)
 
     def update_diff(self) -> None:
+        if self.selected_file is not None:
+            headers = self.selected_file.headers
+            content = self.selected_file.content
+        else:
+            headers = []
+            content = []
+
         self.pad_diff.update(
-            self.diff_headers,
-            self.diff_contents,
+            headers,
+            content,
             self.diff_lines(),
             self.diff_longest_line()
         )
@@ -314,16 +316,20 @@ class CursesUi:
             ], title='Help menu')
             self.stdscr.refresh()
             self.help_menu_visible = True
-        except:
+        except ValueError:
             pass
 
     def diff_lines(self) -> int:
-        return len(self.diff_headers) + len(self.diff_contents)
+        if self.selected_file is None:
+            return 0
+        return len(self.selected_file.headers) + len(self.selected_file.content)
 
     def diff_longest_line(self) -> int:
+        if self.selected_file is None:
+            return 0
         return max(
-            max( len(line) for line in self.diff_headers ),
-            max( len(line) for line in self.diff_contents )
+            max( len(line) for line in self.selected_file.headers ) if len(self.selected_file.headers) != 0 else 0,
+            max( len(line) for line in self.selected_file.content )  if len(self.selected_file.content) != 0 else 0
         ) if self.diff_lines() != 0 else 0
 
 def curses_initialize(cui: CursesUi) -> None:
