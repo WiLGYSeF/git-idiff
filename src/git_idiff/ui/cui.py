@@ -9,7 +9,6 @@ from ui.filelist import FileList
 from ui.messagebox import MessageBox
 from ui.statusbar import StatusBar
 
-FILELIST_COLUMN_WIDTH = 24
 FILELIST_COLUMN_WIDTH_MIN = 16
 FILELIST_COLUMN_WIDTH_MAX_REMAIN = 16
 FILELIST_SCROLL_COUNT = 5
@@ -45,13 +44,16 @@ class CursesUi:
 
     async def run(self, stdscr: curses.window) -> None:
         self.stdscr = stdscr
+        lines, columns = self.stdscr.getmaxyx()
 
         curses.curs_set(False)
         curses.mousemask(curses.ALL_MOUSE_EVENTS)
         init_colors()
 
-        self.pad_filelist = FileList(stdscr, FILELIST_COLUMN_WIDTH)
-        self.pad_diff = DiffPad(stdscr, self.gitdiff, FILELIST_COLUMN_WIDTH)
+        filelist_column_width = columns // 4
+
+        self.pad_filelist = FileList(stdscr, filelist_column_width)
+        self.pad_diff = DiffPad(stdscr, self.gitdiff, filelist_column_width)
         self.pad_statusbar = StatusBar(stdscr)
 
         stdscr.erase()
