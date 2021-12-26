@@ -29,7 +29,19 @@ class GitFile:
         self.deletions: typing.Optional[int] = deletions
         self.headers: typing.List[str] = headers if headers is not None else []
         self.content: typing.List[str] = content if content is not None else []
-        self.status: str = status if status is not None else GitFile.UNKNOWN
+
+        self.status: str = GitFile.UNKNOWN
+        self.score: int = 0
+
+        self.set_status(status)
+
+    def set_status(self, status) -> None:
+        if status is not None:
+            self.status = status[0]
+            self.score = int(status[1:]) if len(status) > 1 else 0
+        else:
+            self.status = GitFile.UNKNOWN
+            self.score = 0
 
 _FileDiff = typing.Tuple[typing.List[str], typing.List[str]]
 
@@ -68,6 +80,7 @@ class GitDiff:
     ]
     WHITELIST_ARGS_SINGLE = 'DRabwW1230'
     WHITELIST_ARGS_SINGLE_PARAM = 'UBMClSGOI'
+    BLACKLIST_ARGS_SINGLE_PARAM = 'X'
 
     HEADERS_REGEX = re.compile(
         r'^(diff|(old|new) mode|(new|deleted) file|copy|rename|((dis)?similarity )?index|---|\+\+\+) '
@@ -79,9 +92,11 @@ class GitDiff:
     def __init__(self, args: typing.Optional[typing.Iterable[str]] = None):
         self.src_prefix: str = 'a/'
         self.dst_prefix: str = 'b/'
-        self.line_prefix_str: str = ''
+        self.line_prefix: str = ''
+        self._removed_args: typing.List[str] = []
 
         self.args = self._sanitize_args(args) if args is not None else []
+
 
     async def get_diff_async(self) -> typing.List[GitFile]:
         proc = await asyncio.create_subprocess_exec(*[
@@ -109,20 +124,26 @@ class GitDiff:
                 break
 
             insertions, deletions, fname = parts
-            oldfname = None
+            old_fname = None
 
-            if len(fname) == 0:
-                oldfname = self.noprefix(output_split[idx]).decode('utf-8')
-                idx += 1
-                fname = self.noprefix(output_split[idx])
-                idx += 1
+            try:
+                if len(fname) == 0:
+                    old_fname = self.noprefix(output_split[idx]).decode('utf-8')
+                    idx += 1
+                    fname = self.noprefix(output_split[idx])
+                    idx += 1
 
-            results.append(GitFile(
-                fname.decode('utf-8'),
-                oldfname,
-                int(insertions) if insertions != b'-' else None,
-                int(deletions) if deletions != b'-' else None
-            ))
+                    if len(fname) == 0 or len(old_fname) == 0:
+                        raise ValueError('missing filename')
+
+                results.append(GitFile(
+                    fname.decode('utf-8'),
+                    old_fname,
+                    int(insertions) if insertions != b'-' else None,
+                    int(deletions) if deletions != b'-' else None
+                ))
+            except (IndexError, ValueError) as err:
+                raise ValueError('received incorrect output from git diff') from err
 
         # git diff did not return a patch
         if idx == len(output_split):
@@ -131,9 +152,20 @@ class GitDiff:
         result_idx = 0
         for filediff in self._get_file_diffs(output_split[idx].decode('utf-8')):
             headers, content = filediff
+
+            if result_idx == len(results):
+                raise ValueError(
+                    f'too many diff patches were given for all of the changes, only expected {len(results)}'
+                )
+
             results[result_idx].headers = headers
             results[result_idx].content = content
             result_idx += 1
+
+        if result_idx != len(results):
+            raise ValueError(
+                f'not enough diff patches were given for all of the changes, expected {len(results)}, but got {result_idx}'
+            )
 
         return results
 
@@ -161,7 +193,56 @@ class GitDiff:
 
         return lines[start:idx], lines[idx:end]
 
+    async def get_statuses_async(self, files: typing.List[GitFile]) -> None:
+        proc = await asyncio.create_subprocess_exec(*[
+            'git', 'diff', '--name-status', '-z', *self.args
+        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, _ = await proc.communicate()
+
+        self._get_statuses(files, output)
+
+    def get_statuses(self, files: typing.List[GitFile]) -> None:
+        self._get_statuses(files, subprocess.check_output([
+            'git', 'diff', '--name-status', '-z', *self.args
+        ]))
+
+    def _get_statuses(self, files: typing.List[GitFile], output: bytes) -> None:
+        output_split = output.split(b'\0')
+        idx = 0
+
+        filemap: typing.Dict[str, GitFile] = {}
+        for file in files:
+            filemap[file.filename] = file
+
+        while idx < len(output_split) and len(output_split[idx]) > 0:
+            try:
+                status = output_split[idx].decode('utf-8')
+                idx += 1
+                fname = output_split[idx].decode('utf-8')
+                idx += 1
+
+                old_fname = None
+
+                if fname not in filemap:
+                    old_fname = fname
+                    fname = output_split[idx].decode('utf-8')
+                    idx += 1
+
+                    if fname not in filemap:
+                        raise ValueError(f'filename is not in results: {fname}')
+
+                file = filemap[fname]
+                file.set_status(status)
+
+                if old_fname != file.old_filename:
+                    raise ValueError(
+                        f'expected a src filename of {file.old_filename}, but got {old_fname}'
+                    )
+            except (IndexError, ValueError) as err:
+                raise ValueError('received incorrect output from git diff') from err
+
     def _sanitize_args(self, args: typing.Iterable[str]) -> typing.List[str]:
+        self._removed_args = []
         result = []
 
         for arg in args:
@@ -173,26 +254,32 @@ class GitDiff:
                         idx = 1
                         while idx < len(arg) and not arg[idx] in GitDiff.WHITELIST_ARGS_SINGLE_PARAM:
                             if arg[idx] not in GitDiff.WHITELIST_ARGS_SINGLE:
-                                arg = arg[:idx] + arg[idx + 1:]
+                                if arg[idx] in GitDiff.BLACKLIST_ARGS_SINGLE_PARAM:
+                                    self._removed_args.append('-' + arg[idx:])
+                                    arg = arg[:idx]
+                                else:
+                                    self._removed_args.append('-' + arg[idx])
+                                    arg = arg[:idx] + arg[idx + 1:]
                             else:
                                 idx += 1
                         if len(arg) == 1:
                             continue
                     else:
                         if not any(arg.startswith(warg) for warg in GitDiff.WHITELIST_ARGS):
+                            self._removed_args.append(arg)
                             continue
                         if arg.startswith('--src-prefix='):
                             self.src_prefix = arg[len('--src-prefix='):]
                         if arg.startswith('--dst-prefix='):
                             self.dst_prefix = arg[len('--dst-prefix='):]
                         if arg.startswith('--line-prefix='):
-                            self.line_prefix_str = arg[len('--line-prefix='):]
+                            self.line_prefix = arg[len('--line-prefix='):]
             result.append(arg)
 
         return result
 
     def has_prefix(self) -> bool:
-        return len(self.line_prefix_str) != 0
+        return len(self.line_prefix) != 0
 
     def noprefix(self, val: typing.AnyStr) -> typing.AnyStr:
-        return val[len(self.line_prefix_str):] if len(self.line_prefix_str) != 0 else val
+        return val[len(self.line_prefix):] if len(self.line_prefix) != 0 else val

@@ -6,6 +6,7 @@ from gitdiff import GitDiff, GitFile
 from ui.colors import init_colors
 from ui.diff import DiffPad
 from ui.filelist import FileList
+import ui.loader
 from ui.messagebox import MessageBox
 from ui.statusbar import StatusBar
 
@@ -56,11 +57,12 @@ class CursesUi:
         stdscr.erase()
         stdscr.refresh()
 
-        await self.get_diff_async()
+        await self.get_diff_async(update=False)
 
         if len(self.filelist) == 0:
             return
 
+        await self.get_statuses_async()
         self.select_file(0)
 
         while True:
@@ -152,42 +154,23 @@ class CursesUi:
                 else:
                     self.pad_diff.scroll(FILELIST_SCROLL_COUNT, 0)
 
-    async def get_diff_async(self) -> None:
+    async def get_diff_async(self, update: bool = True) -> None:
         self.filelist = []
-        loadchars = r'/-\|'
-        counter = 0
-
         task = asyncio.create_task(self.gitdiff.get_diff_async())
 
-        while True:
-            try:
-                filelist = await asyncio.wait_for(asyncio.shield(task), timeout=WAIT_GET_FILES)
-                break
-            except asyncio.TimeoutError:
-                pass
+        self.filelist = await ui.loader.show_loading(
+            self.stdscr,
+            task,
+            'Loading diff',
+            WAIT_GET_FILES
+        )
+        self._get_diff_after(update)
 
-            self.stdscr.erase()
-            MessageBox.draw(self.stdscr, [
-                '',
-                f'   Loading... {loadchars[counter]}   ',
-                ''
-            ])
-            counter += 1
-            if counter == len(loadchars):
-                counter = 0
-            self.stdscr.refresh()
-
-        self.stdscr.erase()
-        self.stdscr.refresh()
-
-        self.filelist = filelist
-        self._get_diff_after()
-
-    def get_diff(self) -> None:
+    def get_diff(self, update: bool = True) -> None:
         self.filelist = self.gitdiff.get_diff()
-        self._get_diff_after()
+        self._get_diff_after(update)
 
-    def _get_diff_after(self) -> None:
+    def _get_diff_after(self, update: bool = True) -> None:
         if len(self.filelist) != 0:
             self.selected_file = self.filelist[0]
 
@@ -200,8 +183,17 @@ class CursesUi:
             if file.deletions is not None:
                 self.total_deletions += file.deletions
 
+        if update:
+            self.update_filelist()
+            self.update_statusbar()
+
+    async def get_statuses_async(self) -> None:
+        task = asyncio.create_task(self.gitdiff.get_statuses_async(self.filelist))
+        await ui.loader.show_loading(self.stdscr, task, 'Loading file status', WAIT_GET_FILES)
         self.update_filelist()
-        self.update_statusbar()
+
+    def get_statuses(self) -> None:
+        self.gitdiff.get_statuses(self.filelist)
 
     def select_next_file(self) -> bool:
         if self.selected_file_idx == len(self.filelist) - 1:

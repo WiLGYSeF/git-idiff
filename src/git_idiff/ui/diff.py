@@ -6,12 +6,12 @@ import ui.colors
 from ui.pad import CursesPad
 
 class DiffPad(CursesPad):
-    def __init__(self, window: curses.window, gitdiff: GitDiff, filelist_column_width: int):
+    def __init__(self, win: curses.window, gitdiff: GitDiff, filelist_column_width: int):
         self.gitdiff: GitDiff = gitdiff
 
-        lines, columns = window.getmaxyx()
+        lines, columns = win.getmaxyx()
 
-        super().__init__(window,
+        super().__init__(win,
             height = lines - 1,
             width = columns - filelist_column_width,
             offset_y = 0,
@@ -40,9 +40,9 @@ class DiffPad(CursesPad):
                 continue
 
             if self.gitdiff.has_prefix():
-                self.pad.addstr(idx, 0, self.gitdiff.line_prefix_str)
+                self.pad.addstr(idx, 0, self.gitdiff.line_prefix)
                 self.pad.addstr(
-                    idx, len(self.gitdiff.line_prefix_str),
+                    idx, len(self.gitdiff.line_prefix),
                     self.gitdiff.noprefix(line),
                     curses.color_pair(ui.colors.COLOR_HEADER)
                 )
@@ -66,8 +66,8 @@ class DiffPad(CursesPad):
                 attr = curses.color_pair(ui.colors.COLOR_SECTION)
 
             if self.gitdiff.has_prefix():
-                self.pad.addstr(idx, 0, self.gitdiff.line_prefix_str)
-                self.pad.addstr(idx, len(self.gitdiff.line_prefix_str), noprefix, attr)
+                self.pad.addstr(idx, 0, self.gitdiff.line_prefix)
+                self.pad.addstr(idx, len(self.gitdiff.line_prefix), noprefix, attr)
             else:
                 self.pad.addstr(idx, 0, line, attr)
             idx += 1

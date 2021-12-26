@@ -8,7 +8,7 @@ StrAttrFormatValues = typing.Dict[
 ]
 
 class StrAttrFormat:
-    FORMAT_REGEX = re.compile(r'(?<!\\){([^{}]+)(?<!\\)}')
+    FORMAT_REGEX = re.compile(r'{([^{}]+)}')
 
     def __init__(self,
         fmt: str,
@@ -53,7 +53,8 @@ class StrAttrFormat:
             val, attr = self.values[match.groups()[0]]
             yield (val, attr)
             last_idx = match.end()
-        yield (self.format[last_idx:], self.default_attr)
+        if last_idx < len(self.format):
+            yield (self.format[last_idx:], self.default_attr)
 
     def __str__(self) -> str:
         return ''.join(val for val, attr in self)

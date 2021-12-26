@@ -7,12 +7,12 @@ from ui.pad import CursesPad
 from ui.utils import StrAttrFormat, addnstrattrfmt
 
 class FileList(CursesPad):
-    def __init__(self, window: curses.window, column_width: int):
+    def __init__(self, win: curses.window, column_width: int):
         self._column_width: int = column_width
 
-        lines, _ = window.getmaxyx()
+        lines, _ = win.getmaxyx()
 
-        super().__init__(window,
+        super().__init__(win,
             height = lines - 1,
             width = self._column_width,
             offset_y = 0,
@@ -49,32 +49,50 @@ class FileList(CursesPad):
 
         idx = 0
         for file in filelist:
-            insertions, deletions, fname = _gitfile_to_entry(file, max_x)
-            leftpad = " " * (max_x - len(insertions) - len(deletions) - len(fname) - 1)
             attr = curses.A_REVERSE if idx == selected_file_idx else curses.A_NORMAL
-
-            addnstrattrfmt(self.pad, idx, 0, StrAttrFormat(
-                f'{{insertions}} {{deletions}}{leftpad}{fname}',
-                {
-                    'insertions': (insertions, curses.color_pair(ui.colors.COLOR_ADD) | attr),
-                    'deletions': (deletions, curses.color_pair(ui.colors.COLOR_REMOVE) | attr),
-                },
-                attr
-            ), max_x)
+            addnstrattrfmt(self.pad, idx, 0, _gitfile_to_saf(file, attr, max_x), max_x)
             idx += 1
 
         self.refresh(self.y, 0)
 
-def _gitfile_to_entry(file: GitFile, max_x: int) -> typing.Tuple[str, str, str]:
+def _gitfile_to_saf(file: GitFile, attr: int, max_x: int) -> StrAttrFormat:
+    status, insertions, deletions, fname = _gitfile_to_entry(file, max_x)
+    leftpad = ' ' * (max_x - len(status) - len(insertions) - len(deletions) - len(fname) - 2)
+
+    return StrAttrFormat(
+        f'{{status}} {{insertions}} {{deletions}}{leftpad}{fname}',
+        {
+            'status': (status, _status_color(status) | attr),
+            'insertions': (insertions, curses.color_pair(ui.colors.COLOR_ADD) | attr),
+            'deletions': (deletions, curses.color_pair(ui.colors.COLOR_REMOVE) | attr),
+        },
+        attr
+    )
+
+def _gitfile_to_entry(file: GitFile, max_x: int) -> typing.Tuple[str, str, str, str]:
+    status = file.status
     added_str = str(file.insertions) if file.insertions is not None else '-'
     removed_str = str(file.deletions) if file.deletions is not None else '-'
     fname = file.filename
 
-    total_length = len(f'{added_str} {removed_str} {fname}')
+    total_length = len(f'{status} {added_str} {removed_str} {fname}')
     if total_length > max_x:
         fname = '##' + fname[
-            max(len(fname) - (max_x - len(f'{added_str} {removed_str} ##')), 0)
+            max(len(fname) - (max_x - len(f'{status} {added_str} {removed_str} ##')), 0)
             :
         ]
 
-    return (added_str, removed_str, fname)
+    return (status, added_str, removed_str, fname)
+
+def _status_color(status: str) -> int:
+    colormap = {
+        'A': ui.colors.COLOR_ADD,
+        'C': ui.colors.COLOR_CHANGE,
+        'D': ui.colors.COLOR_REMOVE,
+        'M': 0,
+        'R': ui.colors.COLOR_CHANGE,
+        'T': ui.colors.COLOR_CHANGE,
+        'U': ui.colors.COLOR_REMOVE,
+        'X': 0
+    }
+    return curses.color_pair(colormap.get(status, 0))
