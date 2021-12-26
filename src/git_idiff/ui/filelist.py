@@ -6,12 +6,12 @@ from ui.colors import COLOR_ADD, COLOR_REMOVE
 from ui.pad import CursesPad
 
 class FileList(CursesPad):
-    def __init__(self, stdscr, column_width: int):
+    def __init__(self, window: curses.window, column_width: int):
         self.column_width: int = column_width
 
-        lines, _ = stdscr.getmaxyx()
+        lines, _ = window.getmaxyx()
 
-        super().__init__(stdscr,
+        super().__init__(window,
             height = lines - 1,
             width = self.column_width,
             offset_y = 0,

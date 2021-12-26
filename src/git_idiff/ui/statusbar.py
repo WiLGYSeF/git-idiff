@@ -4,10 +4,10 @@ from ui.diff import DiffPad
 from ui.pad import CursesPad
 
 class StatusBar(CursesPad):
-    def __init__(self, stdscr):
-        lines, columns = stdscr.getmaxyx()
+    def __init__(self, window: curses.window):
+        lines, columns = window.getmaxyx()
 
-        super().__init__(stdscr,
+        super().__init__(window,
             height = 2,
             width = columns,
             offset_y = lines - 1,

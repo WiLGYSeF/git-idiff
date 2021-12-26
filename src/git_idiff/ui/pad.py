@@ -2,14 +2,14 @@ from abc import ABC, abstractmethod
 import curses
 
 class CursesPad(ABC):
-    def __init__(self, window, **kwargs):
-        self.window = window
+    def __init__(self, window: curses.window, **kwargs):
+        self.window: curses.window = window
         self.height: int = kwargs['height']
         self.width: int = kwargs['width']
         self.offset_y: int = kwargs['offset_y']
         self.offset_x: int = kwargs['offset_x']
 
-        self.pad = curses.newpad(self.height, self.width)
+        self.pad: curses.window = curses.newpad(self.height, self.width)
 
         self._y: int = 0
         self._x: int = 0
