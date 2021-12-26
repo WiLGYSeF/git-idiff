@@ -40,6 +40,8 @@ class CursesUi:
         self.selected_file_idx: int = -1
         self.filelist_border_selected: bool = False
 
+        self.help_menu_visible: bool = False
+
     async def run(self, stdscr: curses.window) -> None:
         self.stdscr = stdscr
 
@@ -59,10 +61,16 @@ class CursesUi:
         if len(self.filelist) == 0:
             return
 
-        self._select_file(0)
+        self.select_file(0)
 
         while True:
             c = self.stdscr.getch()
+
+            if self.help_menu_visible:
+                self.update_filelist()
+                self.update_diff()
+                self.help_menu_visible = False
+
             if c < 256:
                 ch = chr(c)
                 if ch == 'f':
@@ -71,6 +79,8 @@ class CursesUi:
                     self.select_next_file()
                 elif ch in ('p', 'A'): # ctrl + KEY_UP
                     self.select_prev_file()
+                elif ch == '?':
+                    self.show_help_menu()
                 elif ch == 'q':
                     break
             elif c == curses.KEY_UP:
@@ -122,7 +132,7 @@ class CursesUi:
 
         if self.pad_filelist.pad.enclose(mousey, mousex) and self.pad_filelist.visible:
             if state & curses.BUTTON1_CLICKED:
-                self._select_file(self.pad_filelist.y + mousey)
+                self.select_file(self.pad_filelist.y + mousey)
             elif state & curses.BUTTON1_PRESSED:
                 if mousex == self.pad_filelist.column_width - 1:
                     self.filelist_border_selected = True
@@ -194,7 +204,7 @@ class CursesUi:
         if self.selected_file_idx == len(self.filelist) - 1:
             return False
 
-        self._select_file(self.selected_file_idx + 1)
+        self.select_file(self.selected_file_idx + 1)
         if self.selected_file_idx - self.pad_filelist.y >= self.pad_filelist.height - CursesUi.FILELIST_SCROLL_OFFSET - 1:
             self.pad_filelist.scroll(1, 0)
         return True
@@ -203,12 +213,12 @@ class CursesUi:
         if self.selected_file_idx == 0:
             return False
 
-        self._select_file(self.selected_file_idx - 1)
+        self.select_file(self.selected_file_idx - 1)
         if self.selected_file_idx - self.pad_filelist.y <= CursesUi.FILELIST_SCROLL_OFFSET:
             self.pad_filelist.scroll(-1, 0)
         return True
 
-    def _select_file(self, idx: int) -> None:
+    def select_file(self, idx: int) -> None:
         if idx < 0 or idx >= len(self.filelist):
             return
 
@@ -288,6 +298,21 @@ class CursesUi:
             self.total_insertions,
             self.total_deletions
         )
+
+    def show_help_menu(self) -> None:
+        try:
+            MessageBox.draw(self.stdscr, [
+                '  use arrow keys to navigate diff  ',
+                '  n  select next file',
+                '  p  select previous file',
+                '  f  toggle file list',
+                '',
+                '  q  quit'
+            ], title='Help menu')
+            self.stdscr.refresh()
+            self.help_menu_visible = True
+        except:
+            pass
 
     def diff_lines(self) -> int:
         return len(self.diff_headers) + len(self.diff_contents)
