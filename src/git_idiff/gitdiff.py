@@ -190,6 +190,14 @@ class GitDiff:
 
         return lines[start:idx], lines[idx:end]
 
+    async def get_statuses_async(self, files: typing.List[GitFile]) -> None:
+        proc = await asyncio.create_subprocess_exec(*[
+            'git', 'diff', '--name-status', '-z', *self.args
+        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, _ = await proc.communicate()
+
+        self._get_statuses(files, output)
+
     def get_statuses(self, files: typing.List[GitFile]) -> None:
         self._get_statuses(files, subprocess.check_output([
             'git', 'diff', '--name-status', '-z', *self.args
