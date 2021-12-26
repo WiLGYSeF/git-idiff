@@ -62,7 +62,7 @@ def _gitfile_to_saf(file: GitFile, attr: int, max_x: int) -> StrAttrFormat:
     return StrAttrFormat(
         f'{{status}} {{insertions}} {{deletions}}{leftpad}{fname}',
         {
-            'status': (status, attr),
+            'status': (status, _status_color(status) | attr),
             'insertions': (insertions, curses.color_pair(ui.colors.COLOR_ADD) | attr),
             'deletions': (deletions, curses.color_pair(ui.colors.COLOR_REMOVE) | attr),
         },
@@ -83,3 +83,16 @@ def _gitfile_to_entry(file: GitFile, max_x: int) -> typing.Tuple[str, str, str, 
         ]
 
     return (status, added_str, removed_str, fname)
+
+def _status_color(status: str) -> int:
+    colormap = {
+        'A': ui.colors.COLOR_ADD,
+        'C': ui.colors.COLOR_CHANGE,
+        'D': ui.colors.COLOR_REMOVE,
+        'M': 0,
+        'R': ui.colors.COLOR_CHANGE,
+        'T': ui.colors.COLOR_CHANGE,
+        'U': ui.colors.COLOR_REMOVE,
+        'X': 0
+    }
+    return curses.color_pair(colormap.get(status, 0))
