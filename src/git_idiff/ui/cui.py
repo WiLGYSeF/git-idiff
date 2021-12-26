@@ -9,6 +9,8 @@ from ui.filelist import FileList
 from ui.messagebox import MessageBox
 from ui.statusbar import StatusBar
 
+FILELIST_COLUMN_WIDTH = 24
+
 WAIT_GET_FILES = 0.15
 
 class CursesUi:
@@ -20,7 +22,6 @@ class CursesUi:
         self.gitdiff: GitDiff = GitDiff(diff_args)
 
         self.stdscr: curses.window = None
-        self.filelist_column_width: int = 24
 
         self.pad_filelist: FileList = None
         self.pad_diff: DiffPad = None
@@ -43,8 +44,8 @@ class CursesUi:
         curses.mousemask(curses.ALL_MOUSE_EVENTS)
         init_colors()
 
-        self.pad_filelist = FileList(stdscr, self.filelist_column_width)
-        self.pad_diff = DiffPad(stdscr, self.gitdiff, self.filelist_column_width)
+        self.pad_filelist = FileList(stdscr, FILELIST_COLUMN_WIDTH)
+        self.pad_diff = DiffPad(stdscr, self.gitdiff, FILELIST_COLUMN_WIDTH)
         self.pad_statusbar = StatusBar(stdscr)
 
         stdscr.erase()
@@ -195,15 +196,15 @@ class CursesUi:
     def toggle_filelist(self) -> None:
         if self.pad_filelist.visible:
             self.pad_filelist.visible = False
-            self.pad_diff.offset_x -= self.filelist_column_width
-            self.pad_diff.width += self.filelist_column_width
+            self.pad_diff.offset_x -= self.pad_filelist.column_width
+            self.pad_diff.width += self.pad_filelist.column_width
 
             self.pad_filelist.pad.erase()
             self.pad_filelist.refresh(0, 0)
         else:
             self.pad_filelist.visible = True
-            self.pad_diff.offset_x += self.filelist_column_width
-            self.pad_diff.width -= self.filelist_column_width
+            self.pad_diff.offset_x += self.pad_filelist.column_width
+            self.pad_diff.width -= self.pad_filelist.column_width
 
             self.update_filelist()
 
