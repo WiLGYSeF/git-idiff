@@ -50,20 +50,19 @@ class DiffPad(CursesPad):
                 self.pad.addstr(idx, 0, line, curses.color_pair(ui.colors.COLOR_HEADER))
             idx += 1
 
+        colormap = {
+            '+': curses.color_pair(ui.colors.COLOR_ADD),
+            '-': curses.color_pair(ui.colors.COLOR_REMOVE),
+            '@': curses.color_pair(ui.colors.COLOR_SECTION)
+        }
+
         for line in diff_contents:
             if len(line) == 0:
                 idx += 1
                 continue
 
             noprefix = self.gitdiff.noprefix(line)
-            attr = curses.A_NORMAL
-
-            if noprefix[0] == '+':
-                attr = curses.color_pair(ui.colors.COLOR_ADD)
-            elif noprefix[0] == '-':
-                attr = curses.color_pair(ui.colors.COLOR_REMOVE)
-            elif noprefix[0] == '@':
-                attr = curses.color_pair(ui.colors.COLOR_SECTION)
+            attr = colormap.get(noprefix[0], curses.A_NORMAL)
 
             if self.gitdiff.has_prefix():
                 self.pad.addstr(idx, 0, self.gitdiff.line_prefix)
