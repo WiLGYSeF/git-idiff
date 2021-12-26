@@ -40,7 +40,7 @@ class CursesUi:
         self.stdscr = stdscr
 
         curses.curs_set(False)
-        curses.mousemask(-1)
+        curses.mousemask(curses.ALL_MOUSE_EVENTS)
         init_colors()
 
         self.pad_filelist = FileList(stdscr, self.filelist_column_width)
@@ -180,10 +180,10 @@ class CursesUi:
         if idx < 0 or idx >= len(self.filelist):
             return
 
-        self.selected_file_idx = idx
-        self.selected_file = self.filelist[self.selected_file_idx][0]
-
-        self.get_file_diff()
+        if idx != self.selected_file_idx:
+            self.selected_file_idx = idx
+            self.selected_file = self.filelist[self.selected_file_idx][0]
+            self.get_file_diff()
 
         self.update_filelist()
         self.update_diff()
