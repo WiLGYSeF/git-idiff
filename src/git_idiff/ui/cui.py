@@ -12,6 +12,7 @@ from ui.statusbar import StatusBar
 FILELIST_COLUMN_WIDTH = 24
 FILELIST_COLUMN_WIDTH_MIN = 16
 FILELIST_COLUMN_WIDTH_MAX_REMAIN = 16
+FILELIST_SCROLL_COUNT = 5
 
 WAIT_GET_FILES = 0.15
 
@@ -88,17 +89,17 @@ class CursesUi:
             elif c == curses.KEY_DOWN:
                 self.pad_diff.scroll(1, 0)
             elif c == curses.KEY_LEFT:
-                self.pad_diff.scroll(0, -1)
+                self.pad_diff.scroll(0, -self.pad_diff.width // 2)
             elif c == curses.KEY_RIGHT:
-                self.pad_diff.scroll(0, 1)
+                self.pad_diff.scroll(0, self.pad_diff.width // 2)
             elif c == curses.KEY_PPAGE:
                 self.pad_diff.scroll(-self.pad_diff.height, 0)
             elif c == curses.KEY_NPAGE:
                 self.pad_diff.scroll(self.pad_diff.height, 0)
             elif c == curses.KEY_HOME:
-                self.pad_diff.refresh(self.pad_diff.y, 0)
+                self.pad_diff.refresh(0, 0)
             elif c == curses.KEY_END:
-                self.pad_diff.refresh(self.pad_diff.y, self.pad_diff.pad.getmaxyx()[1])
+                self.pad_diff.refresh(self.pad_diff.pad.getmaxyx()[0], 0)
             elif c == curses.KEY_MOUSE:
                 self._handle_mouse_input()
             elif c == curses.KEY_RESIZE:
@@ -143,14 +144,14 @@ class CursesUi:
         elif self.pad_diff.pad.enclose(mousey, mousex):
             if state & curses.BUTTON4_PRESSED:
                 if state & curses.BUTTON_SHIFT:
-                    self.pad_diff.scroll(0, -5)
+                    self.pad_diff.scroll(0, -FILELIST_SCROLL_COUNT)
                 else:
-                    self.pad_diff.scroll(-5, 0)
+                    self.pad_diff.scroll(-FILELIST_SCROLL_COUNT, 0)
             elif state & CursesUi.CURSES_BUTTON5_PRESSED:
                 if state & curses.BUTTON_SHIFT:
-                    self.pad_diff.scroll(0, 5)
+                    self.pad_diff.scroll(0, FILELIST_SCROLL_COUNT)
                 else:
-                    self.pad_diff.scroll(5, 0)
+                    self.pad_diff.scroll(FILELIST_SCROLL_COUNT, 0)
 
     async def get_files_async(self) -> None:
         self.filelist = []
