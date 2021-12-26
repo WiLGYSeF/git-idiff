@@ -76,7 +76,7 @@ class GitDiff:
         r'^diff --git '
     )
 
-    def __init__(self, args: typing.Optional[typing.List[str]] = None):
+    def __init__(self, args: typing.Optional[typing.Iterable[str]] = None):
         self.src_prefix: str = 'a/'
         self.dst_prefix: str = 'b/'
         self.line_prefix_str: str = ''
@@ -161,7 +161,7 @@ class GitDiff:
 
         return lines[start:idx], lines[idx:end]
 
-    def _sanitize_args(self, args: typing.List[str]) -> typing.List[str]:
+    def _sanitize_args(self, args: typing.Iterable[str]) -> typing.List[str]:
         result = []
 
         for arg in args:
