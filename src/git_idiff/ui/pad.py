@@ -96,7 +96,7 @@ class CursesPad(ABC):
         if self._visible:
             self.pad.refresh(
                 self._y, self._x,
-                self._offset_y, self._offset_x,
+                min(self._offset_y, wmax_y - 1), min(self._offset_x, wmax_x - 1),
                 min(self._height + self._offset_y, wmax_y) - 1,
                 min(self._width + self._offset_x, wmax_x) - 1
             )

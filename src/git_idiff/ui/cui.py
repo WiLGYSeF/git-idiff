@@ -92,7 +92,18 @@ class CursesUi:
             elif c == curses.KEY_MOUSE:
                 self._handle_mouse_input()
             elif c == curses.KEY_RESIZE:
-                pass
+                lines, columns = self.stdscr.getmaxyx()
+                self.pad_filelist.height = lines - 1
+                self.pad_diff.height = lines - 1
+                self.pad_statusbar.offset_y = lines - 1
+                self.pad_diff.width = columns - self.pad_filelist.column_width
+                self.pad_statusbar.width = columns
+
+                self.stdscr.erase()
+                self.stdscr.refresh()
+
+                self.update_filelist()
+                self.update_diff()
 
             self.update_statusbar()
 
@@ -243,11 +254,15 @@ class CursesUi:
         self.update_diff()
 
     def set_filelist_column_width(self, width: int) -> None:
+        if width == self.pad_filelist.column_width:
+            return
+
         _, columns = self.stdscr.getmaxyx()
-        self.pad_filelist.column_width = min(
-            max(width, FILELIST_COLUMN_WIDTH_MIN),
-            columns - FILELIST_COLUMN_WIDTH_MAX_REMAIN
+        self.pad_filelist.column_width = max(
+            min(width, columns - FILELIST_COLUMN_WIDTH_MAX_REMAIN),
+            FILELIST_COLUMN_WIDTH_MIN
         )
+
         self.pad_diff.width = columns - self.pad_filelist.column_width
         self.pad_diff.offset_x = self.pad_filelist.column_width
         self.stdscr.erase()

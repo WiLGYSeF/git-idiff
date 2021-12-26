@@ -27,10 +27,11 @@ class DiffPad(CursesPad):
         self.pad.erase()
 
         max_y, max_x = self.pad.getmaxyx()
-        longest_line = diff_longest_line
-        if diff_lines != max_y or longest_line != max_x:
-            self.refresh(self.y, self.x)
-            self.pad.resize(diff_lines + 1, max(longest_line + 1, max_x))
+        if diff_lines != max_y or diff_longest_line != max_x:
+            self.pad.resize(
+                max(diff_lines + 1, self._height),
+                max(diff_longest_line + 1, self._width)
+            )
 
         idx = 0
         for line in diff_headers:
