@@ -124,6 +124,10 @@ class GitDiff:
                 int(deletions) if deletions != b'-' else None
             ))
 
+        # git diff did not return a patch
+        if idx == len(output_split):
+            return results
+
         result_idx = 0
         for filediff in self._get_file_diffs(output_split[idx].decode('utf-8')):
             headers, content = filediff

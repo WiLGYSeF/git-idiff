@@ -313,9 +313,13 @@ class CursesUi:
             pass
 
     def diff_lines(self) -> int:
+        if self.selected_file is None:
+            return 0
         return len(self.selected_file.headers) + len(self.selected_file.contents)
 
     def diff_longest_line(self) -> int:
+        if self.selected_file is None:
+            return 0
         return max(
             max( len(line) for line in self.selected_file.headers ) if len(self.selected_file.headers) != 0 else 0,
             max( len(line) for line in self.selected_file.contents )  if len(self.selected_file.contents) != 0 else 0
