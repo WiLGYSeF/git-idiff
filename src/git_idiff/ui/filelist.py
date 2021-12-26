@@ -7,23 +7,32 @@ from ui.pad import CursesPad
 
 class FileList(CursesPad):
     def __init__(self, window: curses.window, column_width: int):
-        self.column_width: int = column_width
+        self._column_width: int = column_width
 
         lines, _ = window.getmaxyx()
 
         super().__init__(window,
             height = lines - 1,
-            width = self.column_width,
+            width = self._column_width,
             offset_y = 0,
             offset_x = 0
         )
 
-        self.visible: bool = True
+    @property
+    def column_width(self) -> int:
+        return self._column_width
+
+    @column_width.setter
+    def column_width(self, val: int) -> None:
+        val = max(val, 1)
+
+        if val != self._column_width:
+            self._column_width = val
+
+            max_y, _ = self.pad.getmaxyx()
+            self.resize(max_y, val)
 
     def update(self, filelist, selected_file_idx) -> None:
-        if not self.visible:
-            return
-
         self.pad.erase()
 
         max_y, max_x = self.pad.getmaxyx()

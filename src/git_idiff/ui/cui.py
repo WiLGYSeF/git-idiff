@@ -9,6 +9,10 @@ from ui.filelist import FileList
 from ui.messagebox import MessageBox
 from ui.statusbar import StatusBar
 
+FILELIST_COLUMN_WIDTH_MIN = 16
+FILELIST_COLUMN_WIDTH_MAX_REMAIN = 16
+FILELIST_SCROLL_COUNT = 5
+
 WAIT_GET_FILES = 0.15
 
 class CursesUi:
@@ -20,7 +24,6 @@ class CursesUi:
         self.gitdiff: GitDiff = GitDiff(diff_args)
 
         self.stdscr: curses.window = None
-        self.filelist_column_width: int = 24
 
         self.pad_filelist: FileList = None
         self.pad_diff: DiffPad = None
@@ -35,16 +38,22 @@ class CursesUi:
 
         self.selected_file: typing.Optional[str] = None
         self.selected_file_idx: int = -1
+        self.filelist_border_selected: bool = False
+
+        self.help_menu_visible: bool = False
 
     async def run(self, stdscr: curses.window) -> None:
         self.stdscr = stdscr
+        lines, columns = self.stdscr.getmaxyx()
 
         curses.curs_set(False)
-        curses.mousemask(-1)
+        curses.mousemask(curses.ALL_MOUSE_EVENTS)
         init_colors()
 
-        self.pad_filelist = FileList(stdscr, self.filelist_column_width)
-        self.pad_diff = DiffPad(stdscr, self.gitdiff, self.filelist_column_width)
+        filelist_column_width = columns // 4
+
+        self.pad_filelist = FileList(stdscr, filelist_column_width)
+        self.pad_diff = DiffPad(stdscr, self.gitdiff, filelist_column_width)
         self.pad_statusbar = StatusBar(stdscr)
 
         stdscr.erase()
@@ -55,18 +64,26 @@ class CursesUi:
         if len(self.filelist) == 0:
             return
 
-        self._select_file(0)
+        self.select_file(0)
 
         while True:
             c = self.stdscr.getch()
+
+            if self.help_menu_visible:
+                self.update_filelist()
+                self.update_diff()
+                self.help_menu_visible = False
+
             if c < 256:
                 ch = chr(c)
                 if ch == 'f':
                     self.toggle_filelist()
-                elif ch == 'n':
+                elif ch in ('n', 'B'): # ctrl + KEY_DOWN
                     self.select_next_file()
-                elif ch == 'p':
+                elif ch in ('p', 'A'): # ctrl + KEY_UP
                     self.select_prev_file()
+                elif ch == '?':
+                    self.show_help_menu()
                 elif ch == 'q':
                     break
             elif c == curses.KEY_UP:
@@ -74,41 +91,69 @@ class CursesUi:
             elif c == curses.KEY_DOWN:
                 self.pad_diff.scroll(1, 0)
             elif c == curses.KEY_LEFT:
-                self.pad_diff.scroll(0, -1)
+                self.pad_diff.scroll(0, -self.pad_diff.width // 2)
             elif c == curses.KEY_RIGHT:
-                self.pad_diff.scroll(0, 1)
+                self.pad_diff.scroll(0, self.pad_diff.width // 2)
             elif c == curses.KEY_PPAGE:
                 self.pad_diff.scroll(-self.pad_diff.height, 0)
             elif c == curses.KEY_NPAGE:
                 self.pad_diff.scroll(self.pad_diff.height, 0)
             elif c == curses.KEY_HOME:
-                self.pad_diff.refresh(self.pad_diff.y, 0)
+                self.pad_diff.refresh(0, 0)
             elif c == curses.KEY_END:
-                self.pad_diff.refresh(self.pad_diff.y, self.pad_diff.pad.getmaxyx()[1])
+                self.pad_diff.refresh(self.pad_diff.pad.getmaxyx()[0], 0)
             elif c == curses.KEY_MOUSE:
-                _, x, y, _, state = curses.getmouse()
-                if self.pad_filelist.pad.enclose(y, x):
-                    if state & curses.BUTTON1_CLICKED:
-                        self._select_file(self.pad_filelist.y + y)
-                    elif state & curses.BUTTON4_PRESSED:
-                        self.select_prev_file()
-                    elif state & CursesUi.CURSES_BUTTON5_PRESSED:
-                        self.select_next_file()
-                elif self.pad_diff.pad.enclose(y, x):
-                    if state & curses.BUTTON4_PRESSED:
-                        if state & curses.BUTTON_SHIFT:
-                            self.pad_diff.scroll(0, -5)
-                        else:
-                            self.pad_diff.scroll(-5, 0)
-                    elif state & CursesUi.CURSES_BUTTON5_PRESSED:
-                        if state & curses.BUTTON_SHIFT:
-                            self.pad_diff.scroll(0, 5)
-                        else:
-                            self.pad_diff.scroll(5, 0)
+                self._handle_mouse_input()
             elif c == curses.KEY_RESIZE:
-                pass
+                lines, columns = self.stdscr.getmaxyx()
+                self.pad_filelist.height = lines - 1
+                self.pad_diff.height = lines - 1
+                self.pad_statusbar.offset_y = lines - 1
+                self.pad_diff.width = columns - self.pad_filelist.column_width
+                self.pad_statusbar.width = columns
+
+                self.stdscr.erase()
+                self.stdscr.refresh()
+
+                self.update_filelist()
+                self.update_diff()
 
             self.update_statusbar()
+
+    def _handle_mouse_input(self):
+        try:
+            result = curses.getmouse()
+        except curses.error:
+            return
+
+        _, mousex, mousey, _, state = result
+
+        if state & curses.BUTTON1_RELEASED:
+            if self.filelist_border_selected:
+                self.set_filelist_column_width(mousex + 1)
+            self.filelist_border_selected = False
+
+        if self.pad_filelist.pad.enclose(mousey, mousex) and self.pad_filelist.visible:
+            if state & curses.BUTTON1_CLICKED:
+                self.select_file(self.pad_filelist.y + mousey)
+            elif state & curses.BUTTON1_PRESSED:
+                if mousex == self.pad_filelist.column_width - 1:
+                    self.filelist_border_selected = True
+            elif state & curses.BUTTON4_PRESSED:
+                self.select_prev_file()
+            elif state & CursesUi.CURSES_BUTTON5_PRESSED:
+                self.select_next_file()
+        elif self.pad_diff.pad.enclose(mousey, mousex):
+            if state & curses.BUTTON4_PRESSED:
+                if state & curses.BUTTON_SHIFT:
+                    self.pad_diff.scroll(0, -FILELIST_SCROLL_COUNT)
+                else:
+                    self.pad_diff.scroll(-FILELIST_SCROLL_COUNT, 0)
+            elif state & CursesUi.CURSES_BUTTON5_PRESSED:
+                if state & curses.BUTTON_SHIFT:
+                    self.pad_diff.scroll(0, FILELIST_SCROLL_COUNT)
+                else:
+                    self.pad_diff.scroll(FILELIST_SCROLL_COUNT, 0)
 
     async def get_files_async(self) -> None:
         self.filelist = []
@@ -125,18 +170,18 @@ class CursesUi:
                 pass
 
             self.stdscr.erase()
-
             MessageBox.draw(self.stdscr, [
                 '',
                 f'   Loading... {loadchars[counter]}   ',
                 ''
             ])
-
             counter += 1
             if counter == len(loadchars):
                 counter = 0
-
             self.stdscr.refresh()
+
+        self.stdscr.erase()
+        self.stdscr.refresh()
 
         self.filelist = filelist
         self._get_files()
@@ -162,7 +207,7 @@ class CursesUi:
         if self.selected_file_idx == len(self.filelist) - 1:
             return False
 
-        self._select_file(self.selected_file_idx + 1)
+        self.select_file(self.selected_file_idx + 1)
         if self.selected_file_idx - self.pad_filelist.y >= self.pad_filelist.height - CursesUi.FILELIST_SCROLL_OFFSET - 1:
             self.pad_filelist.scroll(1, 0)
         return True
@@ -171,23 +216,25 @@ class CursesUi:
         if self.selected_file_idx == 0:
             return False
 
-        self._select_file(self.selected_file_idx - 1)
+        self.select_file(self.selected_file_idx - 1)
         if self.selected_file_idx - self.pad_filelist.y <= CursesUi.FILELIST_SCROLL_OFFSET:
             self.pad_filelist.scroll(-1, 0)
         return True
 
-    def _select_file(self, idx: int) -> None:
+    def select_file(self, idx: int) -> None:
         if idx < 0 or idx >= len(self.filelist):
             return
 
-        self.selected_file_idx = idx
-        self.selected_file = self.filelist[self.selected_file_idx][0]
-
-        self.get_file_diff()
+        if idx != self.selected_file_idx:
+            self.selected_file_idx = idx
+            self.selected_file = self.filelist[self.selected_file_idx][0]
+            self.get_file_diff()
 
         self.update_filelist()
         self.update_diff()
         self.update_statusbar()
+
+        self.pad_diff.refresh(0, 0)
 
     def get_file_diff(self) -> None:
         self.diff_headers, self.diff_contents = self.gitdiff.get_file_diff(self.selected_file)
@@ -195,18 +242,42 @@ class CursesUi:
     def toggle_filelist(self) -> None:
         if self.pad_filelist.visible:
             self.pad_filelist.visible = False
-            self.pad_diff.offset_x -= self.filelist_column_width
-            self.pad_diff.width += self.filelist_column_width
+            self.pad_diff.offset_x -= self.pad_filelist.column_width
+            self.pad_diff.width += self.pad_filelist.column_width
+
+            self.stdscr.erase()
+            self.stdscr.refresh()
 
             self.pad_filelist.pad.erase()
             self.pad_filelist.refresh(0, 0)
         else:
             self.pad_filelist.visible = True
-            self.pad_diff.offset_x += self.filelist_column_width
-            self.pad_diff.width -= self.filelist_column_width
+            self.pad_diff.offset_x += self.pad_filelist.column_width
+            self.pad_diff.width -= self.pad_filelist.column_width
 
+            self.pad_filelist.scroll(
+                self.selected_file_idx - self.pad_filelist.y - CursesUi.FILELIST_SCROLL_OFFSET - 1,
+                0
+            )
             self.update_filelist()
 
+        self.update_diff()
+
+    def set_filelist_column_width(self, width: int) -> None:
+        if width == self.pad_filelist.column_width:
+            return
+
+        _, columns = self.stdscr.getmaxyx()
+        self.pad_filelist.column_width = max(
+            min(width, columns - FILELIST_COLUMN_WIDTH_MAX_REMAIN),
+            FILELIST_COLUMN_WIDTH_MIN
+        )
+
+        self.pad_diff.width = columns - self.pad_filelist.column_width
+        self.pad_diff.offset_x = self.pad_filelist.column_width
+        self.stdscr.erase()
+        self.stdscr.refresh()
+        self.update_filelist()
         self.update_diff()
 
     def update_filelist(self) -> None:
@@ -230,6 +301,21 @@ class CursesUi:
             self.total_insertions,
             self.total_deletions
         )
+
+    def show_help_menu(self) -> None:
+        try:
+            MessageBox.draw(self.stdscr, [
+                '  use arrow keys to navigate diff  ',
+                '  n  select next file',
+                '  p  select previous file',
+                '  f  toggle file list',
+                '',
+                '  q  quit'
+            ], title='Help menu')
+            self.stdscr.refresh()
+            self.help_menu_visible = True
+        except:
+            pass
 
     def diff_lines(self) -> int:
         return len(self.diff_headers) + len(self.diff_contents)

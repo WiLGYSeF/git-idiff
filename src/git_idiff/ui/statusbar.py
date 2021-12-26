@@ -35,15 +35,16 @@ class StatusBar(CursesPad):
         rightstr = f'({diff_linenum}, {diff_colnum}) / ({diff_lines}, {diff_longest_line}) '
 
         leftcenter_pad = ' ' * (
-            (max_x - (len(leftstr) + len(centerstr) + len(rightstr))) // 2
+            (self._width - (len(leftstr) + len(centerstr) + len(rightstr))) // 2
         )
         centerright_pad = ' ' * (
-            max_x - (len(leftstr) + len(centerstr) + len(rightstr) + len(leftcenter_pad))
+            self._width - (len(leftstr) + len(centerstr) + len(rightstr) + len(leftcenter_pad))
         )
 
-        self.pad.addstr(
+        self.pad.addnstr(
             0, 0,
-            (leftstr + leftcenter_pad + centerstr + centerright_pad + rightstr)[:max_x],
+            (leftstr + leftcenter_pad + centerstr + centerright_pad + rightstr),
+            min(self._width, max_x),
             curses.A_REVERSE
         )
 
