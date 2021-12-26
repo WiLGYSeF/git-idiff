@@ -8,7 +8,7 @@ async def show_loading(
     win: curses.window,
     task: asyncio.Task,
     message: str,
-    wait_interval: int
+    wait_interval: float
 ) -> typing.Any:
     loadchars = r'/-\|'
     counter = 0
