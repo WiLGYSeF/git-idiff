@@ -48,6 +48,19 @@ class CursesUi:
         curses.mousemask(curses.ALL_MOUSE_EVENTS)
         init_colors()
 
+        removed_args = self.gitdiff.removed_args
+        if len(removed_args) > 0:
+            try:
+                MessageBox.draw(stdscr, MessageBox.box_msg([
+                    'You supplied unsupported arguments, they will be ignored: ',
+                    ', '.join(removed_args),
+                    '',
+                    'Press any key to continue.'
+                ], min(70, columns - 4)), title='Unsupported arguments')
+                self.stdscr.getch()
+            except ValueError:
+                pass
+
         filelist_column_width = columns // 4
 
         self.pad_filelist = FileList(stdscr, filelist_column_width)

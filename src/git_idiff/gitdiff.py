@@ -273,3 +273,7 @@ class GitDiff:
             result.append(arg)
 
         return result
+
+    @property
+    def removed_args(self) -> typing.List[str]:
+        return self._removed_args[:]

@@ -70,6 +70,18 @@ class MessageBox:
         for line in message:
             _addnstr(win, cur.add(1, 0), line, width)
 
+    @staticmethod
+    def box_msg(message: typing.List[str], width: int) -> typing.List[str]:
+        result = []
+
+        for line in message:
+            while len(line) > width:
+                result.append(line[:width])
+                line = line[width:]
+            result.append(line)
+
+        return result
+
 def _addch(win: curses.window, vec: Vector, val: int) -> None:
     win.addch(vec.y, vec.x, val)
 
