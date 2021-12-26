@@ -39,15 +39,7 @@ class DiffPad(CursesPad):
                 idx += 1
                 continue
 
-            if self.gitdiff.has_prefix():
-                self.pad.addstr(idx, 0, self.gitdiff.line_prefix)
-                self.pad.addstr(
-                    idx, len(self.gitdiff.line_prefix),
-                    self.gitdiff.noprefix(line),
-                    curses.color_pair(ui.colors.COLOR_HEADER)
-                )
-            else:
-                self.pad.addstr(idx, 0, line, curses.color_pair(ui.colors.COLOR_HEADER))
+            self.pad.addstr(idx, 0, line, curses.color_pair(ui.colors.COLOR_HEADER))
             idx += 1
 
         colormap = {
@@ -61,14 +53,7 @@ class DiffPad(CursesPad):
                 idx += 1
                 continue
 
-            noprefix = self.gitdiff.noprefix(line)
-            attr = colormap.get(noprefix[0], curses.A_NORMAL)
-
-            if self.gitdiff.has_prefix():
-                self.pad.addstr(idx, 0, self.gitdiff.line_prefix)
-                self.pad.addstr(idx, len(self.gitdiff.line_prefix), noprefix, attr)
-            else:
-                self.pad.addstr(idx, 0, line, attr)
+            self.pad.addstr(idx, 0, line, colormap.get(line[0], curses.A_NORMAL))
             idx += 1
 
         self.refresh(self.y, self.x)

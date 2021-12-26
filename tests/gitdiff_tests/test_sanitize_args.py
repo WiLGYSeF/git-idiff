@@ -99,35 +99,6 @@ class SanitizeArgsTest(unittest.TestCase):
                 self.assertListEqual(entry[EXPECTED], gitdiff.args)
                 self.assertListEqual(entry[REMOVED], gitdiff._removed_args)
 
-    def test_sanitize_args_line_prefix(self):
-        entries = [
-            {
-                ARGS: ['--line-prefix=a'],
-                EXPECTED: 'a'
-            },
-            {
-                ARGS: ['--line-prefix=ab c'],
-                EXPECTED: 'ab c'
-            },
-            {
-                ARGS: ['--line-prefix=a', '--line-prefix=b'],
-                EXPECTED: 'b'
-            },
-            {
-                ARGS: [],
-                EXPECTED: ''
-            },
-        ]
-
-        for entry in entries:
-            args = entry[ARGS]
-            expected = entry[EXPECTED]
-
-            with self.subTest(args=args):
-                gitdiff = GitDiff(args)
-                self.assertEqual(expected, gitdiff.line_prefix)
-                self.assertEqual(len(expected) != 0, gitdiff.has_prefix())
-
     def test_sanitize_args_src_dst_prefix(self):
         entries = [
             {
@@ -151,28 +122,3 @@ class SanitizeArgsTest(unittest.TestCase):
                     self.assertEqual(src, gitdiff.src_prefix)
                 if dst is not None:
                     self.assertEqual(dst, gitdiff.dst_prefix)
-
-    def test_noprefix(self):
-        entries = [
-            {
-                ARGS: ['--line-prefix=a'],
-                VALUE: 'abc',
-                EXPECTED: 'bc'
-            },
-            { # is this test valid?
-                ARGS: ['--line-prefix=b'],
-                VALUE: 'abc',
-                EXPECTED: 'bc'
-            },
-            {
-                ARGS: [],
-                VALUE: 'abc',
-                EXPECTED: 'abc'
-            },
-        ]
-
-        for entry in entries:
-            args = entry[ARGS]
-            with self.subTest(args=args):
-                gitdiff = GitDiff(args)
-                self.assertEqual(entry[EXPECTED], gitdiff.noprefix(entry[VALUE]))
