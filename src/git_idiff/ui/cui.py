@@ -61,6 +61,7 @@ class CursesUi:
         if len(self.filelist) == 0:
             return
 
+        self.get_statuses()
         self.select_file(0)
 
         while True:
@@ -202,6 +203,9 @@ class CursesUi:
 
         self.update_filelist()
         self.update_statusbar()
+
+    def get_statuses(self) -> None:
+        self.gitdiff.get_statuses(self.filelist)
 
     def select_next_file(self) -> bool:
         if self.selected_file_idx == len(self.filelist) - 1:

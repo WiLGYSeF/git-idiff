@@ -56,28 +56,30 @@ class FileList(CursesPad):
         self.refresh(self.y, 0)
 
 def _gitfile_to_saf(file: GitFile, attr: int, max_x: int) -> StrAttrFormat:
-    insertions, deletions, fname = _gitfile_to_entry(file, max_x)
-    leftpad = ' ' * (max_x - len(insertions) - len(deletions) - len(fname) - 1)
+    status, insertions, deletions, fname = _gitfile_to_entry(file, max_x)
+    leftpad = ' ' * (max_x - len(status) - len(insertions) - len(deletions) - len(fname) - 2)
 
     return StrAttrFormat(
-        f'{{insertions}} {{deletions}}{leftpad}{fname}',
+        f'{{status}} {{insertions}} {{deletions}}{leftpad}{fname}',
         {
+            'status': (status, attr),
             'insertions': (insertions, curses.color_pair(ui.colors.COLOR_ADD) | attr),
             'deletions': (deletions, curses.color_pair(ui.colors.COLOR_REMOVE) | attr),
         },
         attr
     )
 
-def _gitfile_to_entry(file: GitFile, max_x: int) -> typing.Tuple[str, str, str]:
+def _gitfile_to_entry(file: GitFile, max_x: int) -> typing.Tuple[str, str, str, str]:
+    status = file.status
     added_str = str(file.insertions) if file.insertions is not None else '-'
     removed_str = str(file.deletions) if file.deletions is not None else '-'
     fname = file.filename
 
-    total_length = len(f'{added_str} {removed_str} {fname}')
+    total_length = len(f'{status} {added_str} {removed_str} {fname}')
     if total_length > max_x:
         fname = '##' + fname[
-            max(len(fname) - (max_x - len(f'{added_str} {removed_str} ##')), 0)
+            max(len(fname) - (max_x - len(f'{status} {added_str} {removed_str} ##')), 0)
             :
         ]
 
-    return (added_str, removed_str, fname)
+    return (status, added_str, removed_str, fname)

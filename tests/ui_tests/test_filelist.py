@@ -14,23 +14,23 @@ class FileListTest(unittest.TestCase):
         entries = [
             {
                 GITFILE: GitFile('test', None, 5, 2),
-                MAX_X: 10,
-                EXPECTED: '5 2   test'
+                MAX_X: 12,
+                EXPECTED: 'X 5 2   test'
             },
             {
                 GITFILE: GitFile('testasdf', None, 5, 2),
                 MAX_X: 10,
-                EXPECTED: '5 2 ##asdf'
+                EXPECTED: 'X 5 2 ##df'
             },
             {
                 GITFILE: GitFile('test', None, 15, 2),
                 MAX_X: 3,
-                EXPECTED: '15 '
+                EXPECTED: 'X 1'
             },
             {
                 GITFILE: GitFile('test', None, None, None),
-                MAX_X: 10,
-                EXPECTED: '- -   test'
+                MAX_X: 12,
+                EXPECTED: 'X - -   test'
             },
         ]
 
@@ -48,23 +48,23 @@ class FileListTest(unittest.TestCase):
         entries = [
             {
                 GITFILE: GitFile('test', None, 5, 2),
-                MAX_X: 10,
-                EXPECTED: ('5', '2', 'test')
+                MAX_X: 12,
+                EXPECTED: ('X', '5', '2', 'test')
             },
             {
                 GITFILE: GitFile('testasdf', None, 5, 2),
                 MAX_X: 10,
-                EXPECTED: ('5', '2', '##asdf')
+                EXPECTED: ('X', '5', '2', '##df')
             },
             {
                 GITFILE: GitFile('test', None, 5, 2),
                 MAX_X: 3,
-                EXPECTED: ('5', '2', '##')
+                EXPECTED: ('X', '5', '2', '##')
             },
             {
                 GITFILE: GitFile('test', None, None, None),
-                MAX_X: 10,
-                EXPECTED: ('-', '-', 'test')
+                MAX_X: 12,
+                EXPECTED: ('X', '-', '-', 'test')
             },
         ]
 
