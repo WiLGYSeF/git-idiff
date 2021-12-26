@@ -9,7 +9,7 @@ EXPECTED = 'expected'
 
 class FileListTest(unittest.TestCase):
     def test_gitfile_to_entry(self):
-        ENTRIES = [
+        entries = [
             {
                 GITFILE: GitFile('test', None, 5, 2),
                 MAX_X: 10,
@@ -32,7 +32,7 @@ class FileListTest(unittest.TestCase):
             },
         ]
 
-        for entry in ENTRIES:
+        for entry in entries:
             with self.subTest(gitfile=entry[GITFILE], max_x=entry[MAX_X]):
                 self.assertTupleEqual(
                     entry[EXPECTED],

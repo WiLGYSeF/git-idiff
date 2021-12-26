@@ -8,7 +8,7 @@ VALUE = 'value'
 
 class GitDiffTest(unittest.TestCase):
     def test_sanitize_args(self):
-        ENTRIES = [
+        entries = [
             {
                 ARGS: ['this', 'is', 'a', 'test'],
                 EXPECTED: ['this', 'is', 'a', 'test']
@@ -19,13 +19,13 @@ class GitDiffTest(unittest.TestCase):
             }
         ]
 
-        for entry in ENTRIES:
+        for entry in entries:
             gitdiff = GitDiff(entry[ARGS])
             with self.subTest(args=entry[ARGS]):
                 self.assertListEqual(entry[EXPECTED], gitdiff.args)
 
     def test_sanitize_args_whitelist_single(self):
-        ENTRIES = [
+        entries = [
             {
                 ARGS: ['this', '-X', 'is', '-XX', 'a'],
                 EXPECTED: ['this', 'is', 'a']
@@ -44,13 +44,13 @@ class GitDiffTest(unittest.TestCase):
             }
         ]
 
-        for entry in ENTRIES:
+        for entry in entries:
             gitdiff = GitDiff(entry[ARGS])
             with self.subTest(args=entry[ARGS]):
                 self.assertListEqual(entry[EXPECTED], gitdiff.args)
 
     def test_sanitize_args_whitelist_single_param(self):
-        ENTRIES = [
+        entries = [
             {
                 ARGS: ['-XM5X'],
                 EXPECTED: ['-M5X']
@@ -61,26 +61,26 @@ class GitDiffTest(unittest.TestCase):
             }
         ]
 
-        for entry in ENTRIES:
+        for entry in entries:
             gitdiff = GitDiff(entry[ARGS])
             with self.subTest(args=entry[ARGS]):
                 self.assertListEqual(entry[EXPECTED], gitdiff.args)
 
     def test_sanitize_args_whitelist(self):
-        ENTRIES = [
+        entries = [
             {
                 ARGS: ['--not-whitelisted', '--cached', '--text', '--not-whitelisted'],
                 EXPECTED: ['--cached', '--text']
             }
         ]
 
-        for entry in ENTRIES:
+        for entry in entries:
             gitdiff = GitDiff(entry[ARGS])
             with self.subTest(args=entry[ARGS]):
                 self.assertListEqual(entry[EXPECTED], gitdiff.args)
 
     def test_sanitize_args_line_prefix(self):
-        ENTRIES = [
+        entries = [
             {
                 ARGS: ['--line-prefix=a'],
                 EXPECTED: 'a'
@@ -99,14 +99,14 @@ class GitDiffTest(unittest.TestCase):
             },
         ]
 
-        for entry in ENTRIES:
+        for entry in entries:
             gitdiff = GitDiff(entry[ARGS])
             with self.subTest(args=entry[ARGS]):
                 self.assertEqual(entry[EXPECTED], gitdiff.line_prefix_str)
                 self.assertEqual(len(entry[EXPECTED]) != 0, gitdiff.has_prefix())
 
     def test_noprefix(self):
-        ENTRIES = [
+        entries = [
             {
                 ARGS: ['--line-prefix=a'],
                 VALUE: 'abc',
@@ -124,7 +124,7 @@ class GitDiffTest(unittest.TestCase):
             },
         ]
 
-        for entry in ENTRIES:
+        for entry in entries:
             gitdiff = GitDiff(entry[ARGS])
             with self.subTest(args=entry[ARGS]):
                 self.assertEqual(entry[EXPECTED], gitdiff.noprefix(entry[VALUE]))
