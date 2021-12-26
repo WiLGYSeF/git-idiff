@@ -108,6 +108,9 @@ class CursesPad(ABC):
         self._height = max_y
         self._width = max_x
 
+        self._y = min(self._y, max_y)
+        self._x = min(self._x, max_x)
+
         self.pad.resize(max_y, max_x)
 
 def _clamp(val: int, minval: int, maxval: int) -> int:

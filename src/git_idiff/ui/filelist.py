@@ -5,8 +5,6 @@ from gitdiff import GitFile
 from ui.colors import COLOR_ADD, COLOR_REMOVE
 from ui.pad import CursesPad
 
-COLUMN_WIDTH_MIN = 8
-
 class FileList(CursesPad):
     def __init__(self, window: curses.window, column_width: int):
         self._column_width: int = column_width
@@ -26,7 +24,7 @@ class FileList(CursesPad):
 
     @column_width.setter
     def column_width(self, val: int) -> None:
-        val = max(val, COLUMN_WIDTH_MIN)
+        val = max(val, 1)
 
         if val != self._column_width:
             self._column_width = val

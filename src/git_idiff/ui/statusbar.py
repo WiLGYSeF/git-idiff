@@ -41,9 +41,10 @@ class StatusBar(CursesPad):
             max_x - (len(leftstr) + len(centerstr) + len(rightstr) + len(leftcenter_pad))
         )
 
-        self.pad.addstr(
+        self.pad.addnstr(
             0, 0,
-            (leftstr + leftcenter_pad + centerstr + centerright_pad + rightstr)[:max_x],
+            (leftstr + leftcenter_pad + centerstr + centerright_pad + rightstr),
+            max_x,
             curses.A_REVERSE
         )
 

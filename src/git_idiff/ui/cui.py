@@ -10,6 +10,8 @@ from ui.messagebox import MessageBox
 from ui.statusbar import StatusBar
 
 FILELIST_COLUMN_WIDTH = 24
+FILELIST_COLUMN_WIDTH_MIN = 16
+FILELIST_COLUMN_WIDTH_MAX_REMAIN = 16
 
 WAIT_GET_FILES = 0.15
 
@@ -36,6 +38,7 @@ class CursesUi:
 
         self.selected_file: typing.Optional[str] = None
         self.selected_file_idx: int = -1
+        self.filelist_border_selected: bool = False
 
     async def run(self, stdscr: curses.window) -> None:
         self.stdscr = stdscr
@@ -87,30 +90,46 @@ class CursesUi:
             elif c == curses.KEY_END:
                 self.pad_diff.refresh(self.pad_diff.y, self.pad_diff.pad.getmaxyx()[1])
             elif c == curses.KEY_MOUSE:
-                _, x, y, _, state = curses.getmouse()
-
-                if self.pad_filelist.pad.enclose(y, x) and self.pad_filelist.visible:
-                    if state & curses.BUTTON1_CLICKED:
-                        self._select_file(self.pad_filelist.y + y)
-                    elif state & curses.BUTTON4_PRESSED:
-                        self.select_prev_file()
-                    elif state & CursesUi.CURSES_BUTTON5_PRESSED:
-                        self.select_next_file()
-                elif self.pad_diff.pad.enclose(y, x):
-                    if state & curses.BUTTON4_PRESSED:
-                        if state & curses.BUTTON_SHIFT:
-                            self.pad_diff.scroll(0, -5)
-                        else:
-                            self.pad_diff.scroll(-5, 0)
-                    elif state & CursesUi.CURSES_BUTTON5_PRESSED:
-                        if state & curses.BUTTON_SHIFT:
-                            self.pad_diff.scroll(0, 5)
-                        else:
-                            self.pad_diff.scroll(5, 0)
+                self._handle_mouse_input()
             elif c == curses.KEY_RESIZE:
                 pass
 
             self.update_statusbar()
+
+    def _handle_mouse_input(self):
+        try:
+            result = curses.getmouse()
+        except curses.error:
+            return
+
+        _, mousex, mousey, _, state = result
+
+        if state & curses.BUTTON1_RELEASED:
+            if self.filelist_border_selected:
+                self.set_filelist_column_width(mousex + 1)
+            self.filelist_border_selected = False
+
+        if self.pad_filelist.pad.enclose(mousey, mousex) and self.pad_filelist.visible:
+            if state & curses.BUTTON1_CLICKED:
+                self._select_file(self.pad_filelist.y + mousey)
+            elif state & curses.BUTTON1_PRESSED:
+                if mousex == self.pad_filelist.column_width - 1:
+                    self.filelist_border_selected = True
+            elif state & curses.BUTTON4_PRESSED:
+                self.select_prev_file()
+            elif state & CursesUi.CURSES_BUTTON5_PRESSED:
+                self.select_next_file()
+        elif self.pad_diff.pad.enclose(mousey, mousex):
+            if state & curses.BUTTON4_PRESSED:
+                if state & curses.BUTTON_SHIFT:
+                    self.pad_diff.scroll(0, -5)
+                else:
+                    self.pad_diff.scroll(-5, 0)
+            elif state & CursesUi.CURSES_BUTTON5_PRESSED:
+                if state & curses.BUTTON_SHIFT:
+                    self.pad_diff.scroll(0, 5)
+                else:
+                    self.pad_diff.scroll(5, 0)
 
     async def get_files_async(self) -> None:
         self.filelist = []
@@ -194,6 +213,8 @@ class CursesUi:
         self.update_diff()
         self.update_statusbar()
 
+        self.pad_diff.refresh(0, 0)
+
     def get_file_diff(self) -> None:
         self.diff_headers, self.diff_contents = self.gitdiff.get_file_diff(self.selected_file)
 
@@ -219,6 +240,19 @@ class CursesUi:
             )
             self.update_filelist()
 
+        self.update_diff()
+
+    def set_filelist_column_width(self, width: int) -> None:
+        _, columns = self.stdscr.getmaxyx()
+        self.pad_filelist.column_width = min(
+            max(width, FILELIST_COLUMN_WIDTH_MIN),
+            columns - FILELIST_COLUMN_WIDTH_MAX_REMAIN
+        )
+        self.pad_diff.width = columns - self.pad_filelist.column_width
+        self.pad_diff.offset_x = self.pad_filelist.column_width
+        self.stdscr.erase()
+        self.stdscr.refresh()
+        self.update_filelist()
         self.update_diff()
 
     def update_filelist(self) -> None:
