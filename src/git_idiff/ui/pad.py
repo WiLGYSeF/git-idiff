@@ -11,6 +11,7 @@ class CursesPad(ABC):
 
         self.pad: curses.window = curses.newpad(self.height, self.width)
 
+        self._visible: bool = True
         self._y: int = 0
         self._x: int = 0
 
@@ -67,6 +68,14 @@ class CursesPad(ABC):
             self.refresh(self._y, self._x)
 
     @property
+    def visible(self) -> bool:
+        return self._visible
+
+    @visible.setter
+    def visible(self, val: bool) -> None:
+        self._visible = val
+
+    @property
     def x(self) -> int:
         return self._x
 
@@ -84,12 +93,13 @@ class CursesPad(ABC):
         self._y = _clamp(y, 0, pmax_y - self._height - 1)
         self._x = _clamp(x, 0, pmax_x - self._width - 1)
 
-        self.pad.refresh(
-            self._y, self._x,
-            self._offset_y, self._offset_x,
-            min(self._height + self._offset_y, wmax_y) - 1,
-            min(self._width + self._offset_x, wmax_x) - 1
-        )
+        if self._visible:
+            self.pad.refresh(
+                self._y, self._x,
+                self._offset_y, self._offset_x,
+                min(self._height + self._offset_y, wmax_y) - 1,
+                min(self._width + self._offset_x, wmax_x) - 1
+            )
 
     def resize(self, max_y: int, max_x: int) -> None:
         if max_y < 1 or max_x < 1:

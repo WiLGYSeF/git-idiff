@@ -88,7 +88,8 @@ class CursesUi:
                 self.pad_diff.refresh(self.pad_diff.y, self.pad_diff.pad.getmaxyx()[1])
             elif c == curses.KEY_MOUSE:
                 _, x, y, _, state = curses.getmouse()
-                if self.pad_filelist.pad.enclose(y, x):
+
+                if self.pad_filelist.pad.enclose(y, x) and self.pad_filelist.visible:
                     if state & curses.BUTTON1_CLICKED:
                         self._select_file(self.pad_filelist.y + y)
                     elif state & curses.BUTTON4_PRESSED:
@@ -138,6 +139,9 @@ class CursesUi:
                 counter = 0
 
             self.stdscr.refresh()
+
+        self.stdscr.erase()
+        self.stdscr.refresh()
 
         self.filelist = filelist
         self._get_files()
@@ -199,6 +203,9 @@ class CursesUi:
             self.pad_diff.offset_x -= self.pad_filelist.column_width
             self.pad_diff.width += self.pad_filelist.column_width
 
+            self.stdscr.erase()
+            self.stdscr.refresh()
+
             self.pad_filelist.pad.erase()
             self.pad_filelist.refresh(0, 0)
         else:
@@ -206,6 +213,10 @@ class CursesUi:
             self.pad_diff.offset_x += self.pad_filelist.column_width
             self.pad_diff.width -= self.pad_filelist.column_width
 
+            self.pad_filelist.scroll(
+                self.selected_file_idx - self.pad_filelist.y - CursesUi.FILELIST_SCROLL_OFFSET - 1,
+                0
+            )
             self.update_filelist()
 
         self.update_diff()

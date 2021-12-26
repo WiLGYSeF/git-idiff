@@ -20,8 +20,6 @@ class FileList(CursesPad):
             offset_x = 0
         )
 
-        self.visible: bool = True
-
     @property
     def column_width(self) -> int:
         return self._column_width
@@ -37,9 +35,6 @@ class FileList(CursesPad):
             self.resize(max_y, val)
 
     def update(self, filelist, selected_file_idx) -> None:
-        if not self.visible:
-            return
-
         self.pad.erase()
 
         max_y, max_x = self.pad.getmaxyx()
