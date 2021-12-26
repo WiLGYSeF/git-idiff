@@ -33,7 +33,7 @@ class CursesUi:
         self.total_insertions: int = 0
         self.total_deletions: int = 0
 
-        self.selected_file: GitFile = None
+        self.selected_file: typing.Optional[GitFile] = None
         self.selected_file_idx: int = -1
         self.filelist_border_selected: bool = False
 
@@ -279,9 +279,16 @@ class CursesUi:
         self.pad_filelist.update(self.filelist, self.selected_file_idx)
 
     def update_diff(self) -> None:
+        if self.selected_file is not None:
+            headers = self.selected_file.headers
+            content = self.selected_file.content
+        else:
+            headers = []
+            content = []
+
         self.pad_diff.update(
-            self.selected_file.headers,
-            self.selected_file.content,
+            headers,
+            content,
             self.diff_lines(),
             self.diff_longest_line()
         )
