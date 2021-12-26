@@ -281,7 +281,7 @@ class CursesUi:
     def update_diff(self) -> None:
         self.pad_diff.update(
             self.selected_file.headers,
-            self.selected_file.contents,
+            self.selected_file.content,
             self.diff_lines(),
             self.diff_longest_line()
         )
@@ -315,14 +315,14 @@ class CursesUi:
     def diff_lines(self) -> int:
         if self.selected_file is None:
             return 0
-        return len(self.selected_file.headers) + len(self.selected_file.contents)
+        return len(self.selected_file.headers) + len(self.selected_file.content)
 
     def diff_longest_line(self) -> int:
         if self.selected_file is None:
             return 0
         return max(
             max( len(line) for line in self.selected_file.headers ) if len(self.selected_file.headers) != 0 else 0,
-            max( len(line) for line in self.selected_file.contents )  if len(self.selected_file.contents) != 0 else 0
+            max( len(line) for line in self.selected_file.content )  if len(self.selected_file.content) != 0 else 0
         ) if self.diff_lines() != 0 else 0
 
 def curses_initialize(cui: CursesUi) -> None:

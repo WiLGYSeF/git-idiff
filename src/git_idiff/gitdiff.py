@@ -20,7 +20,7 @@ class GitFile:
         insertions: typing.Optional[int] = None,
         deletions: typing.Optional[int] = None,
         headers: typing.Optional[typing.List[str]] = None,
-        contents: typing.Optional[typing.List[str]] = None,
+        content: typing.Optional[typing.List[str]] = None,
         status: typing.Optional[str] = None
     ):
         self.filename: str = filename
@@ -28,7 +28,7 @@ class GitFile:
         self.insertions: typing.Optional[int] = insertions
         self.deletions: typing.Optional[int] = deletions
         self.headers: typing.List[str] = headers if headers is not None else []
-        self.contents: typing.List[str] = contents if contents is not None else []
+        self.content: typing.List[str] = content if content is not None else []
         self.status: str = status if status is not None else GitFile.UNKNOWN
 
 _FileDiff = typing.Tuple[typing.List[str], typing.List[str]]
@@ -132,7 +132,7 @@ class GitDiff:
         for filediff in self._get_file_diffs(output_split[idx].decode('utf-8')):
             headers, content = filediff
             results[result_idx].headers = headers
-            results[result_idx].contents = content
+            results[result_idx].content = content
             result_idx += 1
 
         return results
