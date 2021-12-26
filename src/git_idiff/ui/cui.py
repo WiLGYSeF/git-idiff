@@ -64,44 +64,44 @@ class CursesUi:
         self.select_file(0)
 
         while True:
-            c = self.stdscr.getch()
+            key = self.stdscr.getch()
 
             if self.help_menu_visible:
                 self.update_filelist()
                 self.update_diff()
                 self.help_menu_visible = False
 
-            if c < 256:
-                ch = chr(c)
-                if ch == 'f':
+            if key < 256:
+                keychr = chr(key)
+                if keychr == 'f':
                     self.toggle_filelist()
-                elif ch in ('n', 'B'): # ctrl + KEY_DOWN
+                elif keychr in ('n', 'B'): # ctrl + KEY_DOWN
                     self.select_next_file()
-                elif ch in ('p', 'A'): # ctrl + KEY_UP
+                elif keychr in ('p', 'A'): # ctrl + KEY_UP
                     self.select_prev_file()
-                elif ch == '?':
+                elif keychr == '?':
                     self.show_help_menu()
-                elif ch == 'q':
+                elif keychr == 'q':
                     break
-            elif c == curses.KEY_UP:
+            elif key == curses.KEY_UP:
                 self.pad_diff.scroll(-1, 0)
-            elif c == curses.KEY_DOWN:
+            elif key == curses.KEY_DOWN:
                 self.pad_diff.scroll(1, 0)
-            elif c == curses.KEY_LEFT:
+            elif key == curses.KEY_LEFT:
                 self.pad_diff.scroll(0, -self.pad_diff.width // 2)
-            elif c == curses.KEY_RIGHT:
+            elif key == curses.KEY_RIGHT:
                 self.pad_diff.scroll(0, self.pad_diff.width // 2)
-            elif c == curses.KEY_PPAGE:
+            elif key == curses.KEY_PPAGE:
                 self.pad_diff.scroll(-self.pad_diff.height, 0)
-            elif c == curses.KEY_NPAGE:
+            elif key == curses.KEY_NPAGE:
                 self.pad_diff.scroll(self.pad_diff.height, 0)
-            elif c == curses.KEY_HOME:
+            elif key == curses.KEY_HOME:
                 self.pad_diff.refresh(0, 0)
-            elif c == curses.KEY_END:
+            elif key == curses.KEY_END:
                 self.pad_diff.refresh(self.pad_diff.pad.getmaxyx()[0], 0)
-            elif c == curses.KEY_MOUSE:
+            elif key == curses.KEY_MOUSE:
                 self._handle_mouse_input()
-            elif c == curses.KEY_RESIZE:
+            elif key == curses.KEY_RESIZE:
                 lines, columns = self.stdscr.getmaxyx()
                 self.pad_filelist.height = lines - 1
                 self.pad_diff.height = lines - 1
