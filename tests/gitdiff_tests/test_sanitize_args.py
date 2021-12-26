@@ -20,8 +20,9 @@ class SanitizeArgsTest(unittest.TestCase):
         ]
 
         for entry in entries:
-            gitdiff = GitDiff(entry[ARGS])
-            with self.subTest(args=entry[ARGS]):
+            args = entry[ARGS]
+            with self.subTest(args=args):
+                gitdiff = GitDiff(args)
                 self.assertListEqual(entry[EXPECTED], gitdiff.args)
 
     def test_sanitize_args_whitelist_single(self):
@@ -45,8 +46,9 @@ class SanitizeArgsTest(unittest.TestCase):
         ]
 
         for entry in entries:
-            gitdiff = GitDiff(entry[ARGS])
-            with self.subTest(args=entry[ARGS]):
+            args = entry[ARGS]
+            with self.subTest(args=args):
+                gitdiff = GitDiff(args)
                 self.assertListEqual(entry[EXPECTED], gitdiff.args)
 
     def test_sanitize_args_whitelist_single_param(self):
@@ -62,8 +64,9 @@ class SanitizeArgsTest(unittest.TestCase):
         ]
 
         for entry in entries:
-            gitdiff = GitDiff(entry[ARGS])
-            with self.subTest(args=entry[ARGS]):
+            args = entry[ARGS]
+            with self.subTest(args=args):
+                gitdiff = GitDiff(args)
                 self.assertListEqual(entry[EXPECTED], gitdiff.args)
 
     def test_sanitize_args_whitelist(self):
@@ -75,8 +78,9 @@ class SanitizeArgsTest(unittest.TestCase):
         ]
 
         for entry in entries:
-            gitdiff = GitDiff(entry[ARGS])
-            with self.subTest(args=entry[ARGS]):
+            args = entry[ARGS]
+            with self.subTest(args=args):
+                gitdiff = GitDiff(args)
                 self.assertListEqual(entry[EXPECTED], gitdiff.args)
 
     def test_sanitize_args_line_prefix(self):
@@ -100,10 +104,35 @@ class SanitizeArgsTest(unittest.TestCase):
         ]
 
         for entry in entries:
-            gitdiff = GitDiff(entry[ARGS])
-            with self.subTest(args=entry[ARGS]):
+            args = entry[ARGS]
+            with self.subTest(args=args):
+                gitdiff = GitDiff(args)
                 self.assertEqual(entry[EXPECTED], gitdiff.line_prefix)
                 self.assertEqual(len(entry[EXPECTED]) != 0, gitdiff.has_prefix())
+
+    def test_sanitize_args_src_dst_prefix(self):
+        entries = [
+            {
+                ARGS: ['--src-prefix=y'],
+                EXPECTED: ('y', None)
+            },
+            {
+                ARGS: ['--dst-prefix=z'],
+                EXPECTED: (None, 'z')
+            }
+        ]
+
+        for entry in entries:
+            args = entry[ARGS]
+            expected = entry[EXPECTED]
+
+            with self.subTest(args=args):
+                gitdiff = GitDiff(args)
+                src, dst = expected
+                if src is not None:
+                    self.assertEqual(src, gitdiff.src_prefix)
+                if dst is not None:
+                    self.assertEqual(dst, gitdiff.dst_prefix)
 
     def test_noprefix(self):
         entries = [
@@ -125,6 +154,7 @@ class SanitizeArgsTest(unittest.TestCase):
         ]
 
         for entry in entries:
-            gitdiff = GitDiff(entry[ARGS])
-            with self.subTest(args=entry[ARGS]):
+            args = entry[ARGS]
+            with self.subTest(args=args):
+                gitdiff = GitDiff(args)
                 self.assertEqual(entry[EXPECTED], gitdiff.noprefix(entry[VALUE]))

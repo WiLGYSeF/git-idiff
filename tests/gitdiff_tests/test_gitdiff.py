@@ -21,6 +21,9 @@ class GitDiffTest(unittest.TestCase):
             },
             {
                 ARGS: ['-M05', '3382256', 'c04fa3b'],
+            },
+            {
+                ARGS: ['empty'],
             }
         ]
 
@@ -43,6 +46,9 @@ class GitDiffTest(unittest.TestCase):
             },
             {
                 ARGS: ['-M05', '3382256', 'c04fa3b'],
+            },
+            {
+                ARGS: ['empty'],
             }
         ]
 
