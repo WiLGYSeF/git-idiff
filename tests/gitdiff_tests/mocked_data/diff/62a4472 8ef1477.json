@@ -31,7 +31,8 @@
                 "+if __name__ == '__main__':",
                 "+    main(sys.argv[1:])"
             ],
-            "status": "X"
+            "status": "M",
+            "score": 0
         },
         {
             "filename": "gitdiff.py",
@@ -103,7 +104,8 @@
                 "+",
                 "+    return result"
             ],
-            "status": "X"
+            "status": "M",
+            "score": 0
         },
         {
             "filename": "gui.py",
@@ -273,7 +275,8 @@
                 "-def initialize(ui: UiCurses) -> None:",
                 "-    curses.wrapper(ui.start)"
             ],
-            "status": "X"
+            "status": "D",
+            "score": 0
         },
         {
             "filename": "ui/__init__.py",
@@ -286,7 +289,8 @@
                 "index 0000000..e69de29"
             ],
             "content": [],
-            "status": "X"
+            "status": "A",
+            "score": 0
         },
         {
             "filename": "ui/cui.py",
@@ -514,7 +518,8 @@
                 "+def curses_initialize(cui: CursesUi) -> None:",
                 "+    curses.wrapper(cui.run)"
             ],
-            "status": "X"
+            "status": "A",
+            "score": 0
         },
         {
             "filename": "ui/pad.py",
@@ -573,7 +578,8 @@
                 "+    return max(minval, min(val, maxval))",
                 ""
             ],
-            "status": "X"
+            "status": "A",
+            "score": 0
         }
     ]
 }

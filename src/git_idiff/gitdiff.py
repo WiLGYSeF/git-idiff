@@ -29,7 +29,19 @@ class GitFile:
         self.deletions: typing.Optional[int] = deletions
         self.headers: typing.List[str] = headers if headers is not None else []
         self.content: typing.List[str] = content if content is not None else []
-        self.status: str = status if status is not None else GitFile.UNKNOWN
+
+        self.status: str = GitFile.UNKNOWN
+        self.score: int = 0
+
+        self.set_status(status)
+
+    def set_status(self, status) -> None:
+        if status is not None:
+            self.status = status[0]
+            self.score = int(status[1:]) if len(status) > 1 else 0
+        else:
+            self.status = GitFile.UNKNOWN
+            self.score = 0
 
 _FileDiff = typing.Tuple[typing.List[str], typing.List[str]]
 
@@ -160,6 +172,40 @@ class GitDiff:
             idx += 1
 
         return lines[start:idx], lines[idx:end]
+
+    def get_statuses(self, files: typing.List[GitFile]) -> None:
+        self._get_statuses(files, subprocess.check_output([
+            'git', 'diff', '--name-status', '-z', *self.args
+        ]))
+
+    def _get_statuses(self, files: typing.List[GitFile], output: bytes) -> None:
+        output_split = output.split(b'\0')
+        idx = 0
+
+        filemap: typing.Dict[str, GitFile] = {}
+        for file in files:
+            filemap[file.filename] = file
+
+        while idx < len(output_split) and len(output_split[idx]) > 0:
+            status = output_split[idx].decode('utf-8')
+            idx += 1
+            fname = output_split[idx].decode('utf-8')
+            idx += 1
+
+            old_fname = None
+
+            if fname not in filemap:
+                old_fname = fname
+                fname = output_split[idx].decode('utf-8')
+                idx += 1
+
+            file = filemap[fname]
+            file.set_status(status)
+
+            if old_fname != file.old_filename:
+                raise ValueError(
+                    f'expected an old filename of {file.old_filename}, but got {old_fname}'
+                )
 
     def _sanitize_args(self, args: typing.Iterable[str]) -> typing.List[str]:
         result = []
