@@ -100,14 +100,21 @@ class GitDiff:
         proc = await asyncio.create_subprocess_exec(*[
             'git', 'diff', '--numstat', '-z', '-p', *self.args
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, _ = await proc.communicate()
+        output, stderr = await proc.communicate()
+        if proc.returncode != 0:
+            raise ProcessError(stderr.decode('utf-8'))
 
         return self._get_diff(output)
 
     def get_diff(self) -> typing.List[GitFile]:
-        return self._get_diff(subprocess.check_output([
+        with subprocess.Popen([
             'git', 'diff', '--numstat', '-z', '-p', *self.args
-        ]))
+        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
+            output, stderr = proc.communicate()
+            if proc.returncode != 0:
+                raise ProcessError(stderr.decode('utf-8'))
+
+            return self._get_diff(output)
 
     def _get_diff(self, output: bytes) -> typing.List[GitFile]:
         output_split = output.split(b'\0')
@@ -195,14 +202,21 @@ class GitDiff:
         proc = await asyncio.create_subprocess_exec(*[
             'git', 'diff', '--name-status', '-z', *self.args
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, _ = await proc.communicate()
+        output, stderr = await proc.communicate()
+        if proc.returncode != 0:
+            raise ProcessError(stderr.decode('utf-8'))
 
         self._get_statuses(files, output)
 
     def get_statuses(self, files: typing.List[GitFile]) -> None:
-        self._get_statuses(files, subprocess.check_output([
+        with subprocess.Popen([
             'git', 'diff', '--name-status', '-z', *self.args
-        ]))
+        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
+            output, stderr = proc.communicate()
+            if proc.returncode != 0:
+                raise ProcessError(stderr.decode('utf-8'))
+
+            self._get_statuses(files, output)
 
     def _get_statuses(self, files: typing.List[GitFile], output: bytes) -> None:
         output_split = output.split(b'\0')
@@ -278,3 +292,6 @@ class GitDiff:
     @property
     def removed_args(self) -> typing.List[str]:
         return self._removed_args[:]
+
+class ProcessError(Exception):
+    pass

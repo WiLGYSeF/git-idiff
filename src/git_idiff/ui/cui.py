@@ -1,8 +1,9 @@
 import asyncio
 import curses
+import sys
 import typing
 
-from gitdiff import GitDiff, GitFile
+from gitdiff import GitDiff, GitFile, ProcessError
 from ui.colors import init_colors
 from ui.diff import DiffPad
 from ui.filelist import FileList
@@ -346,7 +347,10 @@ class CursesUi:
         ) if self.diff_lines() != 0 else 0
 
 def curses_initialize(cui: CursesUi) -> None:
-    curses.wrapper(lambda stdscr: _main(cui, stdscr))
+    try:
+        curses.wrapper(lambda stdscr: _main(cui, stdscr))
+    except ProcessError as err:
+        print(err, end='', file=sys.stderr)
 
 def _main(cui: CursesUi, stdscr: curses.window) -> None:
     asyncio.run(cui.run(stdscr))
