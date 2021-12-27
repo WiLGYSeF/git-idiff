@@ -1,8 +1,9 @@
 import asyncio
 import curses
+import sys
 import typing
 
-from gitdiff import GitDiff, GitFile
+from gitdiff import GitDiff, GitFile, ProcessError
 from ui.colors import init_colors
 from ui.diff import DiffPad
 from ui.filelist import FileList
@@ -47,6 +48,27 @@ class CursesUi:
         curses.curs_set(False)
         curses.mousemask(curses.ALL_MOUSE_EVENTS)
         init_colors()
+
+        removed_args = self.gitdiff.removed_args
+        if len(removed_args) > 0:
+            try:
+                MessageBox.draw(
+                    stdscr,
+                    MessageBox.box_msg(
+                        [
+                            'You supplied unsupported arguments, they will be ignored: ',
+                            ', '.join(removed_args),
+                            '',
+                            'Press any key to continue.'
+                        ],
+                        min(70, columns - 4)
+                    ),
+                    title='Unsupported arguments',
+                    hspacing=1
+                )
+                self.stdscr.getch()
+            except ValueError:
+                pass
 
         filelist_column_width = columns // 4
 
@@ -325,7 +347,10 @@ class CursesUi:
         ) if self.diff_lines() != 0 else 0
 
 def curses_initialize(cui: CursesUi) -> None:
-    curses.wrapper(lambda stdscr: _main(cui, stdscr))
+    try:
+        curses.wrapper(lambda stdscr: _main(cui, stdscr))
+    except ProcessError as err:
+        print(err, end='', file=sys.stderr)
 
 def _main(cui: CursesUi, stdscr: curses.window) -> None:
     asyncio.run(cui.run(stdscr))

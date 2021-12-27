@@ -74,7 +74,6 @@ class GitDiff:
         '--textconv', '--no-textconv',
         '--ignore-submodules',
         '--src-prefix', '--dst-prefix', '--no-prefix',
-        '--line-prefix',
         '--ita-invisible-in-index', '--ita-visible-in-index',
         '--base', '--ours', '--theirs',
     ]
@@ -92,7 +91,6 @@ class GitDiff:
     def __init__(self, args: typing.Optional[typing.Iterable[str]] = None):
         self.src_prefix: str = 'a/'
         self.dst_prefix: str = 'b/'
-        self.line_prefix: str = ''
         self._removed_args: typing.List[str] = []
 
         self.args = self._sanitize_args(args) if args is not None else []
@@ -102,14 +100,21 @@ class GitDiff:
         proc = await asyncio.create_subprocess_exec(*[
             'git', 'diff', '--numstat', '-z', '-p', *self.args
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, _ = await proc.communicate()
+        output, stderr = await proc.communicate()
+        if proc.returncode != 0:
+            raise ProcessError(stderr.decode('utf-8'))
 
         return self._get_diff(output)
 
     def get_diff(self) -> typing.List[GitFile]:
-        return self._get_diff(subprocess.check_output([
+        with subprocess.Popen([
             'git', 'diff', '--numstat', '-z', '-p', *self.args
-        ]))
+        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
+            output, stderr = proc.communicate()
+            if proc.returncode != 0:
+                raise ProcessError(stderr.decode('utf-8'))
+
+            return self._get_diff(output)
 
     def _get_diff(self, output: bytes) -> typing.List[GitFile]:
         output_split = output.split(b'\0')
@@ -118,7 +123,7 @@ class GitDiff:
         results: typing.List[GitFile] = []
 
         while idx < len(output_split):
-            parts = self.noprefix(output_split[idx]).split(b'\t')
+            parts = output_split[idx].split(b'\t')
             idx += 1
             if len(parts) == 1:
                 break
@@ -128,9 +133,9 @@ class GitDiff:
 
             try:
                 if len(fname) == 0:
-                    old_fname = self.noprefix(output_split[idx]).decode('utf-8')
+                    old_fname = output_split[idx].decode('utf-8')
                     idx += 1
-                    fname = self.noprefix(output_split[idx])
+                    fname = output_split[idx]
                     idx += 1
 
                     if len(fname) == 0 or len(old_fname) == 0:
@@ -187,7 +192,7 @@ class GitDiff:
     def _get_file_diff(self, lines: typing.List[str], start: int, end: int) -> _FileDiff:
         idx = start
         while idx < end:
-            if GitDiff.HEADERS_REGEX.search(self.noprefix(lines[idx])) is None:
+            if GitDiff.HEADERS_REGEX.search(lines[idx]) is None:
                 break
             idx += 1
 
@@ -197,14 +202,21 @@ class GitDiff:
         proc = await asyncio.create_subprocess_exec(*[
             'git', 'diff', '--name-status', '-z', *self.args
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, _ = await proc.communicate()
+        output, stderr = await proc.communicate()
+        if proc.returncode != 0:
+            raise ProcessError(stderr.decode('utf-8'))
 
         self._get_statuses(files, output)
 
     def get_statuses(self, files: typing.List[GitFile]) -> None:
-        self._get_statuses(files, subprocess.check_output([
+        with subprocess.Popen([
             'git', 'diff', '--name-status', '-z', *self.args
-        ]))
+        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
+            output, stderr = proc.communicate()
+            if proc.returncode != 0:
+                raise ProcessError(stderr.decode('utf-8'))
+
+            self._get_statuses(files, output)
 
     def _get_statuses(self, files: typing.List[GitFile], output: bytes) -> None:
         output_split = output.split(b'\0')
@@ -242,11 +254,11 @@ class GitDiff:
                 raise ValueError('received incorrect output from git diff') from err
 
     def _sanitize_args(self, args: typing.Iterable[str]) -> typing.List[str]:
-        self._removed_args = []
         result = []
 
         for arg in args:
             if arg == '--':
+                result.append(arg)
                 break
             if arg[0] == '-':
                 if len(arg) > 1:
@@ -272,14 +284,14 @@ class GitDiff:
                             self.src_prefix = arg[len('--src-prefix='):]
                         if arg.startswith('--dst-prefix='):
                             self.dst_prefix = arg[len('--dst-prefix='):]
-                        if arg.startswith('--line-prefix='):
-                            self.line_prefix = arg[len('--line-prefix='):]
+
             result.append(arg)
 
         return result
 
-    def has_prefix(self) -> bool:
-        return len(self.line_prefix) != 0
+    @property
+    def removed_args(self) -> typing.List[str]:
+        return self._removed_args[:]
 
-    def noprefix(self, val: typing.AnyStr) -> typing.AnyStr:
-        return val[len(self.line_prefix):] if len(self.line_prefix) != 0 else val
+class ProcessError(Exception):
+    pass
