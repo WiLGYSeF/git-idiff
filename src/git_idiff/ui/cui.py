@@ -95,53 +95,57 @@ class CursesUi:
                 self.update_diff()
                 self.help_menu_visible = False
 
-            if key < 256:
-                keychr = chr(key)
-                if keychr == 'f':
-                    self.toggle_filelist()
-                elif keychr in ('n', 'B'): # ctrl + KEY_DOWN
-                    self.select_next_file()
-                elif keychr in ('p', 'A'): # ctrl + KEY_UP
-                    self.select_prev_file()
-                elif keychr == '?':
-                    self.show_help_menu()
-                elif keychr == 'q':
-                    break
-            elif key == curses.KEY_UP:
-                self.pad_diff.scroll(-1, 0)
-            elif key == curses.KEY_DOWN:
-                self.pad_diff.scroll(1, 0)
-            elif key == curses.KEY_LEFT:
-                self.pad_diff.scroll(0, -self.pad_diff.width // 2)
-            elif key == curses.KEY_RIGHT:
-                self.pad_diff.scroll(0, self.pad_diff.width // 2)
-            elif key == curses.KEY_PPAGE:
-                self.pad_diff.scroll(-self.pad_diff.height, 0)
-            elif key == curses.KEY_NPAGE:
-                self.pad_diff.scroll(self.pad_diff.height, 0)
-            elif key == curses.KEY_HOME:
-                self.pad_diff.refresh(0, 0)
-            elif key == curses.KEY_END:
-                self.pad_diff.refresh(self.pad_diff.pad.getmaxyx()[0], 0)
-            elif key == curses.KEY_MOUSE:
-                self._handle_mouse_input()
-            elif key == curses.KEY_RESIZE:
-                lines, columns = self.stdscr.getmaxyx()
-                self.pad_filelist.height = lines - 1
-                self.pad_diff.height = lines - 1
-                self.pad_statusbar.offset_y = lines - 1
-                self.pad_diff.width = columns - self.pad_filelist.column_width
-                self.pad_statusbar.width = columns
-
-                self.stdscr.erase()
-                self.stdscr.refresh()
-
-                self.update_filelist()
-                self.update_diff()
-
+            if self._handle_key_input(key):
+                break
             self.update_statusbar()
 
-    def _handle_mouse_input(self):
+    def _handle_key_input(self, key: int) -> bool:
+        if key < 256:
+            keychr = chr(key)
+            if keychr == 'f':
+                self.toggle_filelist()
+            elif keychr in ('n', 'B'): # ctrl + KEY_DOWN
+                self.select_next_file()
+            elif keychr in ('p', 'A'): # ctrl + KEY_UP
+                self.select_prev_file()
+            elif keychr == '?':
+                self.show_help_menu()
+            elif keychr == 'q':
+                return True
+        elif key == curses.KEY_UP:
+            self.pad_diff.scroll(-1, 0)
+        elif key == curses.KEY_DOWN:
+            self.pad_diff.scroll(1, 0)
+        elif key == curses.KEY_LEFT:
+            self.pad_diff.scroll(0, -self.pad_diff.width // 2)
+        elif key == curses.KEY_RIGHT:
+            self.pad_diff.scroll(0, self.pad_diff.width // 2)
+        elif key == curses.KEY_PPAGE:
+            self.pad_diff.scroll(-self.pad_diff.height, 0)
+        elif key == curses.KEY_NPAGE:
+            self.pad_diff.scroll(self.pad_diff.height, 0)
+        elif key == curses.KEY_HOME:
+            self.pad_diff.refresh(0, 0)
+        elif key == curses.KEY_END:
+            self.pad_diff.refresh(self.pad_diff.pad.getmaxyx()[0], 0)
+        elif key == curses.KEY_MOUSE:
+            self._handle_mouse_input()
+        elif key == curses.KEY_RESIZE:
+            lines, columns = self.stdscr.getmaxyx()
+            self.pad_filelist.height = lines - 1
+            self.pad_diff.height = lines - 1
+            self.pad_statusbar.offset_y = lines - 1
+            self.pad_diff.width = columns - self.pad_filelist.column_width
+            self.pad_statusbar.width = columns
+
+            self.stdscr.erase()
+            self.stdscr.refresh()
+
+            self.update_filelist()
+            self.update_diff()
+        return False
+
+    def _handle_mouse_input(self) -> None:
         try:
             result = curses.getmouse()
         except curses.error:

@@ -31,7 +31,7 @@ class GitDiffTest(unittest.TestCase):
             args = entry[ARGS]
             with self.subTest(args=args):
                 gitdiff = GitDiff(args)
-                files = gitdiff._get_diff(_get_mocked_diff_data(args))
+                files = gitdiff._process_diff(_get_mocked_diff_data(args))
 
                 self.assertResultsEqual(
                     _get_mocked_diff_results(args),
@@ -56,8 +56,8 @@ class GitDiffTest(unittest.TestCase):
             args = entry[ARGS]
             with self.subTest(args=args):
                 gitdiff = GitDiff(args)
-                files = gitdiff._get_diff(_get_mocked_diff_data(args))
-                gitdiff._get_statuses(files, _get_mocked_status_data(args))
+                files = gitdiff._process_diff(_get_mocked_diff_data(args))
+                gitdiff._process_statuses(files, _get_mocked_status_data(args))
 
                 self.assertResultsEqual(
                     _get_mocked_diff_results(args),
