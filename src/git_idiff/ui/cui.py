@@ -22,8 +22,8 @@ class CursesUi:
 
     CURSES_BUTTON5_PRESSED = 0x00200000 # thanks python
 
-    def __init__(self, diff_args: typing.Optional[typing.Iterable[str]] = None):
-        self.gitdiff: GitDiff = GitDiff(diff_args)
+    def __init__(self, gitdiff: GitDiff):
+        self.gitdiff = gitdiff
 
         self.stdscr: curses.window = None
 
