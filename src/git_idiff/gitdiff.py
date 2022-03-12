@@ -3,6 +3,8 @@ import re
 import subprocess
 import typing
 
+debug = False
+
 class GitFile:
     ADDED = 'A'
     COPIED = 'C'
@@ -82,10 +84,22 @@ class GitDiff:
     BLACKLIST_ARGS_SINGLE_PARAM = 'X'
 
     HEADERS_REGEX = re.compile(
-        r'^(diff|(old|new) mode|(new|deleted) file|copy|rename|((dis)?similarity )?index|---|\+\+\+) '
+        r'^(%s) ' % ('|'.join([
+            'diff',
+            '(old|new) mode',
+            'index',
+            'mode',
+            '(new|deleted) file mode'
+            'copy (from|to)',
+            'rename (from|to)',
+            '(dis)?similarity index'
+            'index',
+            '---',
+            r'\+\+\+',
+        ]))
     )
     DIFFSTART_REGEX = re.compile(
-        r'^diff --git '
+        r'^diff --(cc|git) '
     )
 
     DIFF_ARGS = ['git', 'diff', '--numstat', '-z', '-p']
@@ -131,7 +145,38 @@ class GitDiff:
         output_split = output.split(b'\0')
         idx = 0
 
+        # git diff did not return numstat
+        if len(output_split) == 1:
+            pass
+
         results: typing.List[GitFile] = []
+        merge_conflicts = 0
+
+        if debug:
+            contains_merge_conflicts = True
+            for [headers, content] in self._get_file_diffs(output_split[0].decode('utf-8')):
+                # if len(headers) == 0:
+                #     contains_merge_conflicts = False
+                #     break
+
+                # TODO: only last!!
+                output_split[0] = content[-1].encode('utf-8')
+                content.pop()
+
+                match = GitDiff.DIFFSTART_REGEX.match(headers[0])
+                if match and match.groups()[0] == 'cc':
+                    filename = headers[0][match.end():]
+                    print(filename)
+                
+                results.append(GitFile(
+                    filename,
+                    None,
+                    None,
+                    None,
+                    headers,
+                    content,
+                ))
+                merge_conflicts += 1
 
         while idx < len(output_split):
             parts = output_split[idx].split(b'\t')
@@ -165,7 +210,7 @@ class GitDiff:
         if idx == len(output_split):
             return results
 
-        result_idx = 0
+        result_idx = merge_conflicts
         for filediff in self._get_file_diffs(output_split[idx].decode('utf-8')):
             headers, content = filediff
 
