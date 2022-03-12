@@ -8,6 +8,9 @@ StrAttrFormatValues = typing.Dict[
 ]
 
 class StrAttrFormat:
+    """
+    String attribute formatter used to apply curses attributes in a formatted string
+    """
     FORMAT_REGEX = re.compile(r'{([^{}]+)}')
 
     def __init__(self,

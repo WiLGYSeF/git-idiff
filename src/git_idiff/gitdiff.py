@@ -82,11 +82,26 @@ class GitDiff:
     BLACKLIST_ARGS_SINGLE_PARAM = 'X'
 
     HEADERS_REGEX = re.compile(
-        r'^(diff|(old|new) mode|(new|deleted) file|copy|rename|((dis)?similarity )?index|---|\+\+\+) '
+        r'^(%s) ' % ('|'.join([
+            'diff',
+            '(old|new) mode',
+            'index',
+            'mode',
+            '(new|deleted) file mode',
+            'copy (from|to)',
+            'rename (from|to)',
+            '(dis)?similarity index',
+            'index',
+            '---',
+            r'\+\+\+',
+        ]))
     )
     DIFFSTART_REGEX = re.compile(
-        r'^diff --git '
+        r'^diff --(cc|git) '
     )
+
+    DIFF_ARGS = ['git', 'diff', '--numstat', '-z', '-p']
+    STATUS_ARGS = ['git', 'diff', '--name-status', '-z']
 
     def __init__(self, args: typing.Optional[typing.Iterable[str]] = None):
         self.src_prefix: str = 'a/'
@@ -95,33 +110,72 @@ class GitDiff:
 
         self.args = self._sanitize_args(args) if args is not None else []
 
-
     async def get_diff_async(self) -> typing.List[GitFile]:
+        """
+        Gets git diff patch output and processes it
+        """
         proc = await asyncio.create_subprocess_exec(*[
-            'git', 'diff', '--numstat', '-z', '-p', *self.args
+            *GitDiff.DIFF_ARGS, *self.args
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, stderr = await proc.communicate()
         if proc.returncode != 0:
             raise ProcessError(stderr.decode('utf-8'))
 
-        return self._get_diff(output)
+        return self._process_diff(output)
 
     def get_diff(self) -> typing.List[GitFile]:
+        """
+        Gets git diff patch output and processes it
+        """
         with subprocess.Popen([
-            'git', 'diff', '--numstat', '-z', '-p', *self.args
+            *GitDiff.DIFF_ARGS, *self.args
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
             output, stderr = proc.communicate()
             if proc.returncode != 0:
                 raise ProcessError(stderr.decode('utf-8'))
 
-            return self._get_diff(output)
+            return self._process_diff(output)
 
-    def _get_diff(self, output: bytes) -> typing.List[GitFile]:
+    def _process_diff(self, output: bytes) -> typing.List[GitFile]:
+        """
+        Processes git diff patch output into GitFile entries
+        """
         output_split = output.split(b'\0')
         idx = 0
 
         results: typing.List[GitFile] = []
 
+        # check for merge conflict patches
+        merge_conflicts = 0
+        last_content: typing.List[str] = []
+        for (headers, content) in self._get_file_diffs(output_split[0].decode('utf-8')):
+            if len(headers) == 0:
+                break
+
+            match = GitDiff.DIFFSTART_REGEX.match(headers[0])
+            if not match:
+                raise ValueError(f'expected diff header, but got {headers[0]}')
+            if match.groups()[0] != 'cc':
+                raise ValueError(f'expected combined diff, but got {match.groups()[0]}')
+
+            filename = headers[0][match.end():]
+
+            results.append(GitFile(
+                filename,
+                None,
+                None,
+                None,
+                headers,
+                content,
+            ))
+            last_content = content
+            merge_conflicts += 1
+
+        if len(last_content) != 0:
+            output_split[0] = content[-1].encode('utf-8')
+            content.pop()
+
+        # process numstat
         while idx < len(output_split):
             parts = output_split[idx].split(b'\t')
             idx += 1
@@ -154,7 +208,8 @@ class GitDiff:
         if idx == len(output_split):
             return results
 
-        result_idx = 0
+        # process patches
+        result_idx = merge_conflicts
         for filediff in self._get_file_diffs(output_split[idx].decode('utf-8')):
             headers, content = filediff
 
@@ -175,6 +230,9 @@ class GitDiff:
         return results
 
     def _get_file_diffs(self, data: str) -> typing.Generator[_FileDiff, None, None]:
+        """
+        Iterates and yields each git diff patch entry
+        """
         lines = data.split('\n')
         start = 0
         idx = 0
@@ -190,6 +248,9 @@ class GitDiff:
             yield self._get_file_diff(lines, start, idx)
 
     def _get_file_diff(self, lines: typing.List[str], start: int, end: int) -> _FileDiff:
+        """
+        Returns the separated headers and content from the git diff patch entry
+        """
         idx = start
         while idx < end:
             if GitDiff.HEADERS_REGEX.search(lines[idx]) is None:
@@ -199,26 +260,35 @@ class GitDiff:
         return lines[start:idx], lines[idx:end]
 
     async def get_statuses_async(self, files: typing.List[GitFile]) -> None:
+        """
+        Gets git diff status output and processes it
+        """
         proc = await asyncio.create_subprocess_exec(*[
-            'git', 'diff', '--name-status', '-z', *self.args
+            *GitDiff.STATUS_ARGS, *self.args
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, stderr = await proc.communicate()
         if proc.returncode != 0:
             raise ProcessError(stderr.decode('utf-8'))
 
-        self._get_statuses(files, output)
+        self._process_statuses(files, output)
 
     def get_statuses(self, files: typing.List[GitFile]) -> None:
+        """
+        Gets git diff status output and processes it
+        """
         with subprocess.Popen([
-            'git', 'diff', '--name-status', '-z', *self.args
+            *GitDiff.STATUS_ARGS, *self.args
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
             output, stderr = proc.communicate()
             if proc.returncode != 0:
                 raise ProcessError(stderr.decode('utf-8'))
 
-            self._get_statuses(files, output)
+            self._process_statuses(files, output)
 
-    def _get_statuses(self, files: typing.List[GitFile], output: bytes) -> None:
+    def _process_statuses(self, files: typing.List[GitFile], output: bytes) -> None:
+        """
+        Processes git diff status output
+        """
         output_split = output.split(b'\0')
         idx = 0
 

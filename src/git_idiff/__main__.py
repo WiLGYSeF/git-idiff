@@ -3,10 +3,12 @@
 import sys
 import typing
 
+from gitdiff import GitDiff
 from ui.cui import CursesUi, curses_initialize
 
 def main(args: typing.List[str]) -> None:
-    cui = CursesUi(args)
+    gitdiff = GitDiff(args)
+    cui = CursesUi(gitdiff)
     curses_initialize(cui)
 
 if __name__ == '__main__':

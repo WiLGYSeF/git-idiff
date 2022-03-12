@@ -55,7 +55,7 @@ class SanitizeArgsTest(unittest.TestCase):
             with self.subTest(args=args):
                 gitdiff = GitDiff(args)
                 self.assertListEqual(entry[EXPECTED], gitdiff.args)
-                self.assertListEqual(entry[REMOVED], gitdiff._removed_args)
+                self.assertListEqual(entry[REMOVED], gitdiff.removed_args)
 
     def test_sanitize_args_whitelist_single_param(self):
         entries = [
@@ -81,7 +81,7 @@ class SanitizeArgsTest(unittest.TestCase):
             with self.subTest(args=args):
                 gitdiff = GitDiff(args)
                 self.assertListEqual(entry[EXPECTED], gitdiff.args)
-                self.assertListEqual(entry[REMOVED], gitdiff._removed_args)
+                self.assertListEqual(entry[REMOVED], gitdiff.removed_args)
 
     def test_sanitize_args_whitelist(self):
         entries = [
@@ -97,7 +97,7 @@ class SanitizeArgsTest(unittest.TestCase):
             with self.subTest(args=args):
                 gitdiff = GitDiff(args)
                 self.assertListEqual(entry[EXPECTED], gitdiff.args)
-                self.assertListEqual(entry[REMOVED], gitdiff._removed_args)
+                self.assertListEqual(entry[REMOVED], gitdiff.removed_args)
 
     def test_sanitize_args_src_dst_prefix(self):
         entries = [
