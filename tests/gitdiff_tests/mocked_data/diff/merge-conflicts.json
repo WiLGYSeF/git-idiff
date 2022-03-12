@@ -1,0 +1,120 @@
+{
+    "gitfiles": [
+        {
+            "filename": "src/git_idiff/__main__.py",
+            "old_filename": null,
+            "insertions": null,
+            "deletions": null,
+            "headers": [
+                "diff --cc src/git_idiff/__main__.py",
+                "index 1e02ec9,4cefd50..0000000",
+                "mode 100644,100644..100755",
+                "--- a/src/git_idiff/__main__.py",
+                "+++ b/src/git_idiff/__main__.py"
+            ],
+            "content": [
+                "@@@ -9,7 -9,7 +9,11 @@@ from ui.cui import CursesUi, curses_ini",
+                "  def main(args: typing.List[str]) -> None:",
+                "      gitdiff = GitDiff(args)",
+                "      cui = CursesUi(gitdiff)",
+                "++<<<<<<< HEAD",
+                " +    asdadfasf",
+                "++=======",
+                "+     grff",
+                "++>>>>>>> tmp",
+                "      curses_initialize(cui)",
+                "  ",
+                "  if __name__ == '__main__':"
+            ],
+            "status": "M",
+            "score": 0
+        },
+        {
+            "filename": "tests/gitdiff_tests/test_gitdiff.py",
+            "old_filename": null,
+            "insertions": null,
+            "deletions": null,
+            "headers": [
+                "diff --cc tests/gitdiff_tests/test_gitdiff.py",
+                "index 08b6fc7,4a2e9ae..0000000",
+                "mode 100644,100644..100755",
+                "--- a/tests/gitdiff_tests/test_gitdiff.py",
+                "+++ b/tests/gitdiff_tests/test_gitdiff.py"
+            ],
+            "content": [
+                "@@@ -69,7 -69,7 +69,11 @@@ class GitDiffTest(unittest.TestCase)",
+                "      def test_get_diff_merge_conflicts(self):",
+                "          gd.debug = True",
+                "  ",
+                "++<<<<<<< HEAD",
+                " +        aa axc",
+                "++=======",
+                "+         dafafddfv",
+                "++>>>>>>> tmp",
+                "  ",
+                "          try:",
+                "              args = ['merge-conflicts']"
+            ],
+            "status": "M",
+            "score": 0
+        },
+        {
+            "filename": "src/git_idiff/gitdiff.py",
+            "old_filename": null,
+            "insertions": 1,
+            "deletions": 3,
+            "headers": [
+                "diff --git a/src/git_idiff/gitdiff.py b/src/git_idiff/gitdiff.py",
+                "index 17d8308..d3deec0 100644",
+                "--- a/src/git_idiff/gitdiff.py",
+                "+++ b/src/git_idiff/gitdiff.py"
+            ],
+            "content": [
+                "@@ -151,9 +151,7 @@ class GitDiff:",
+                " ",
+                "         results: typing.List[GitFile] = []",
+                "         merge_conflicts = 0",
+                "-        a",
+                "-        asdasd",
+                "-",
+                "+    ",
+                "         if debug:",
+                "             contains_merge_conflicts = True",
+                "             for [headers, content] in self._get_file_diffs(output_split[0].decode('utf-8')):"
+            ],
+            "status": "M",
+            "score": 0
+        },
+        {
+            "filename": "tests/gitdiff_tests/mocked_data/diff/merge-conflicts.txt",
+            "old_filename": null,
+            "insertions": null,
+            "deletions": null,
+            "headers": [
+                "diff --git a/tests/gitdiff_tests/mocked_data/diff/merge-conflicts.txt b/tests/gitdiff_tests/mocked_data/diff/merge-conflicts.txt",
+                "index c0c6dc4..b8a9df9 100644"
+            ],
+            "content": [
+                "Binary files a/tests/gitdiff_tests/mocked_data/diff/merge-conflicts.txt and b/tests/gitdiff_tests/mocked_data/diff/merge-conflicts.txt differ"
+            ],
+            "status": "X",
+            "score": 0
+        },
+        {
+            "filename": "tests/gitdiff_tests/mocked_data/status/merge-conflicts.txt",
+            "old_filename": null,
+            "insertions": null,
+            "deletions": null,
+            "headers": [
+                "diff --git a/tests/gitdiff_tests/mocked_data/status/merge-conflicts.txt b/tests/gitdiff_tests/mocked_data/status/merge-conflicts.txt",
+                "index 24061c6..7cc1182 100644"
+            ],
+            "content": [
+                "Binary files a/tests/gitdiff_tests/mocked_data/status/merge-conflicts.txt and b/tests/gitdiff_tests/mocked_data/status/merge-conflicts.txt differ",
+                ""
+            ],
+            "status": "M",
+            "score": 0
+        }
+    ]
+}

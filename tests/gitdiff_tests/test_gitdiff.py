@@ -3,7 +3,6 @@ import os
 import typing
 import unittest
 
-from src.git_idiff import gitdiff as gd
 from src.git_idiff.gitdiff import GitDiff, GitFile
 
 ARGS = 'args'
@@ -67,17 +66,10 @@ class GitDiffTest(unittest.TestCase):
                 )
 
     def test_get_diff_merge_conflicts(self):
-        gd.debug = True
-
-        try:
-            args = ['merge-conflicts']
-            gitdiff = GitDiff(args)
-            files = gitdiff._process_diff(_get_mocked_diff_data(args))
-            gitdiff._process_statuses(files, _get_mocked_status_data(args))
-        except Exception as e:
-            print(e)
-
-        gd.debug = False
+        args = ['merge-conflicts']
+        gitdiff = GitDiff(args)
+        files = gitdiff._process_diff(_get_mocked_diff_data(args))
+        gitdiff._process_statuses(files, _get_mocked_status_data(args))
 
         self.assertResultsEqual(
             _get_mocked_diff_results(args),
