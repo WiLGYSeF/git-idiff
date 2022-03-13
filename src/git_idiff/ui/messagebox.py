@@ -70,7 +70,7 @@ class MessageBox:
 
         cur = topleft + Vector(vspacing, 1 + hspacing)
         for line in message:
-            _addnstr(win, cur.add(1, 0), line, width)
+            _addnstr(win, cur.add(1, 0), line + ' ' * (width - len(line)), width)
 
     @staticmethod
     def box_msg(message: typing.List[str], width: int) -> typing.List[str]:
