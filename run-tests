@@ -1,0 +1,15 @@
+#!/bin/bash
+
+oldcd=$(pwd)
+package=src/"$(ls -1 src | head -n1)"
+
+cd "$package"
+coverage run -m unittest discover -s ../../tests -t ../..
+cp .coverage "$oldcd"
+cd "$oldcd"
+coverage html
+
+find "$package" -type f -name '*.py' -exec pycolor pylint {} \+
+
+find "$package" -type f -name '*.py' -exec mypy {} \+
+find tests -type f -name '*.py' -exec mypy --ignore-missing-imports {} \+

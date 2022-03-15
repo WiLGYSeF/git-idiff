@@ -3,13 +3,13 @@ import curses
 import sys
 import typing
 
-from gitdiff import GitDiff, GitFile, ProcessError
-from ui.colors import init_colors
-from ui.diff import DiffPad
-from ui.filelist import FileList
-import ui.loader
-from ui.messagebox import MessageBox
-from ui.statusbar import StatusBar
+from ..gitdiff import GitDiff, GitFile, ProcessError
+from .colors import init_colors
+from .diff import DiffPad
+from .filelist import FileList
+from . import loader
+from .messagebox import MessageBox
+from .statusbar import StatusBar
 
 FILELIST_COLUMN_WIDTH_MIN = 16
 FILELIST_COLUMN_WIDTH_MAX_REMAIN = 16
@@ -184,7 +184,7 @@ class CursesUi:
         self.filelist = []
         task = asyncio.create_task(self.gitdiff.get_diff_async())
 
-        self.filelist = await ui.loader.show_loading(
+        self.filelist = await loader.show_loading(
             self.stdscr,
             task,
             'Loading diff',
@@ -215,7 +215,7 @@ class CursesUi:
 
     async def get_statuses_async(self) -> None:
         task = asyncio.create_task(self.gitdiff.get_statuses_async(self.filelist))
-        await ui.loader.show_loading(self.stdscr, task, 'Loading file status', WAIT_GET_FILES)
+        await loader.show_loading(self.stdscr, task, 'Loading file status', WAIT_GET_FILES)
         self.update_filelist()
 
     def get_statuses(self) -> None:

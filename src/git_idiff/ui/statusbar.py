@@ -1,9 +1,9 @@
 import curses
 
-import ui.colors
-from ui.diff import DiffPad
-from ui.pad import CursesPad
-from ui.utils import StrAttrFormat, addnstrattrfmt
+from . import colors
+from .diff import DiffPad
+from .pad import CursesPad
+from .utils import StrAttrFormat, addnstrattrfmt
 
 class StatusBar(CursesPad):
     def __init__(self, win: curses.window):
@@ -37,11 +37,11 @@ class StatusBar(CursesPad):
             {
                 'insertions': (
                     f'+{total_insertions}',
-                    curses.color_pair(ui.colors.COLOR_ADD) | curses.A_REVERSE
+                    curses.color_pair(colors.COLOR_ADD) | curses.A_REVERSE
                 ),
                 'deletions': (
                     f'-{total_deletions}',
-                    curses.color_pair(ui.colors.COLOR_REMOVE) | curses.A_REVERSE
+                    curses.color_pair(colors.COLOR_REMOVE) | curses.A_REVERSE
                 ),
             },
             curses.A_REVERSE

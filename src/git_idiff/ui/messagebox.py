@@ -1,7 +1,7 @@
 import curses
 import typing
 
-from ui.vector import Vector
+from .vector import Vector
 
 class MessageBox:
     @staticmethod

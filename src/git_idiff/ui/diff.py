@@ -1,9 +1,9 @@
 import curses
 import typing
 
-from gitdiff import GitDiff
-import ui.colors
-from ui.pad import CursesPad
+from ..gitdiff import GitDiff
+from . import colors
+from .pad import CursesPad
 
 class DiffPad(CursesPad):
     def __init__(self, win: curses.window, gitdiff: GitDiff, filelist_column_width: int):
@@ -39,13 +39,13 @@ class DiffPad(CursesPad):
                 idx += 1
                 continue
 
-            self.pad.addstr(idx, 0, line, curses.color_pair(ui.colors.COLOR_HEADER))
+            self.pad.addstr(idx, 0, line, curses.color_pair(colors.COLOR_HEADER))
             idx += 1
 
         colormap = {
-            '+': curses.color_pair(ui.colors.COLOR_ADD),
-            '-': curses.color_pair(ui.colors.COLOR_REMOVE),
-            '@': curses.color_pair(ui.colors.COLOR_SECTION)
+            '+': curses.color_pair(colors.COLOR_ADD),
+            '-': curses.color_pair(colors.COLOR_REMOVE),
+            '@': curses.color_pair(colors.COLOR_SECTION)
         }
 
         for line in diff_contents:
