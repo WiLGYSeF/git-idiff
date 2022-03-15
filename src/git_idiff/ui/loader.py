@@ -2,7 +2,7 @@ import asyncio
 import curses
 import typing
 
-from ui.messagebox import MessageBox
+from .messagebox import MessageBox
 
 async def show_loading(
     win: curses.window,

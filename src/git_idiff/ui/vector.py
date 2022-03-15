@@ -1,4 +1,4 @@
-from overload import overload
+from ..overload import overload
 
 class Vector:
     def __init__(self, y: int, x: int):

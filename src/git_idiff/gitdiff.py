@@ -172,8 +172,8 @@ class GitDiff:
             merge_conflicts += 1
 
         if len(last_content) != 0:
-            output_split[0] = content[-1].encode('utf-8')
-            content.pop()
+            output_split[0] = last_content[-1].encode('utf-8')
+            last_content.pop()
 
         # process numstat
         while idx < len(output_split):

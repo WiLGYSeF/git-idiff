@@ -1,10 +1,10 @@
 import curses
 import typing
 
-from gitdiff import GitFile
-import ui.colors
-from ui.pad import CursesPad
-from ui.utils import StrAttrFormat, addnstrattrfmt
+from ..gitdiff import GitFile
+from . import colors
+from .pad import CursesPad
+from .utils import StrAttrFormat, addnstrattrfmt
 
 class FileList(CursesPad):
     def __init__(self, win: curses.window, column_width: int):
@@ -63,8 +63,8 @@ def _gitfile_to_saf(file: GitFile, attr: int, max_x: int) -> StrAttrFormat:
         f'{{status}} {{insertions}} {{deletions}}{leftpad}{fname}',
         {
             'status': (status, _status_color(status) | attr),
-            'insertions': (insertions, curses.color_pair(ui.colors.COLOR_ADD) | attr),
-            'deletions': (deletions, curses.color_pair(ui.colors.COLOR_REMOVE) | attr),
+            'insertions': (insertions, curses.color_pair(colors.COLOR_ADD) | attr),
+            'deletions': (deletions, curses.color_pair(colors.COLOR_REMOVE) | attr),
         },
         attr
     )
@@ -86,13 +86,13 @@ def _gitfile_to_entry(file: GitFile, max_x: int) -> typing.Tuple[str, str, str, 
 
 def _status_color(status: str) -> int:
     colormap = {
-        'A': ui.colors.COLOR_ADD,
-        'C': ui.colors.COLOR_CHANGE,
-        'D': ui.colors.COLOR_REMOVE,
+        'A': colors.COLOR_ADD,
+        'C': colors.COLOR_CHANGE,
+        'D': colors.COLOR_REMOVE,
         'M': 0,
-        'R': ui.colors.COLOR_CHANGE,
-        'T': ui.colors.COLOR_CHANGE,
-        'U': ui.colors.COLOR_REMOVE,
+        'R': colors.COLOR_CHANGE,
+        'T': colors.COLOR_CHANGE,
+        'U': colors.COLOR_REMOVE,
         'X': 0
     }
     return curses.color_pair(colormap.get(status, 0))

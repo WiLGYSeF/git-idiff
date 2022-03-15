@@ -2,7 +2,7 @@
 
 An interactive curses tool for viewing git diffs that span multiple files.
 
-![git idiff](docs/images/git-idiff.png)
+![git idiff](/docs/images/git-idiff.png)
 
 # Usage
 
@@ -13,9 +13,11 @@ Run git-idiff in a git directory to get an interactive view of the current git d
 git-idiff takes any arguments recognized by the `git diff` command and will use them when displaying output.
 
 Using:
+
 ```bash
 git-idiff HEAD~2 -R -U5
 ```
+
 will display the same output that `git diff` displays, only in an interactive view.
 
 # Keys
@@ -48,7 +50,7 @@ Actions when the mouse is in the filelist pane:
 
 # Filelist Pane
 
-![filelist pane](docs/images/filelist.png)
+![filelist pane](/docs/images/filelist.png)
 
 The filelist pane shows all files in the git diff.
 
