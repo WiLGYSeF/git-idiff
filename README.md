@@ -18,7 +18,7 @@ Using:
 git-idiff HEAD~2 -R -U5
 ```
 
-will display the same output that `git diff` displays, only in an interactive view.
+will display the same output that `git diff` displays, but in an interactive view.
 
 # Keys
 
