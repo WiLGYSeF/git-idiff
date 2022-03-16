@@ -1,5 +1,7 @@
 # git-idiff
 
+[![PyPI version](https://badgen.net/pypi/v/git-idiff)](https://pypi.org/project/git-idiff/)
+
 An interactive curses tool for viewing git diffs that span multiple files.
 
 ![git idiff](/docs/images/git-idiff.png)
